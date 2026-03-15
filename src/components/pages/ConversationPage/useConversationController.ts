@@ -84,6 +84,35 @@ export function useConversationController() {
   const personality = usePersonality(session);
   const memory = useMemory();
 
+  const handleToggleMute = useCallback(() => {
+    audioControls.toggleMute();
+    const willBeMuted = !audioControls.muted;
+
+    if (willBeMuted) {
+      // Cancel any in-progress AI response and clear input buffer
+      session.sendEvent({ type: 'response.cancel' });
+      session.sendEvent({ type: 'input_audio_buffer.clear' });
+      // Disable VAD so the AI won't try to respond while paused
+      session.sendEvent({
+        type: 'session.update',
+        session: { turn_detection: null },
+      });
+    } else {
+      // Re-enable VAD when unpausing
+      session.sendEvent({
+        type: 'session.update',
+        session: {
+          turn_detection: {
+            type: 'semantic_vad',
+            eagerness: vadEagerness,
+            create_response: true,
+            interrupt_response: true,
+          },
+        },
+      });
+    }
+  }, [audioControls, session, vadEagerness]);
+
   useEffect(() => {
     if (session.status === 'connected') {
       personality.applyPersonality(selectedPersonality);
@@ -169,5 +198,6 @@ export function useConversationController() {
     isActive,
     handleConnect,
     handleDisconnect,
+    handleToggleMute,
   };
 }

@@ -26,11 +26,18 @@ export function SessionControls({
   return (
     <div className="border-t border-gray-200 dark:border-gray-700 px-4 py-4">
       <div className="flex flex-col items-center gap-3">
-        {isActive && (
+        {isActive && !muted && (
           <AudioVisualizer
             getFrequencyData={getFrequencyData}
             isActive={status === 'listening' || status === 'speaking'}
           />
+        )}
+
+        {isActive && muted && (
+          <div className="flex items-center gap-2 text-sm text-amber-600 dark:text-amber-400">
+            <span className="inline-block w-2 h-2 bg-amber-500 rounded-full animate-pulse" />
+            Paused — AI and microphone are on hold
+          </div>
         )}
 
         <div className="flex items-center gap-3">
@@ -39,10 +46,10 @@ export function SessionControls({
               onClick={onToggleMute}
               className={`p-3 rounded-full transition-colors ${
                 muted
-                  ? 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400'
+                  ? 'bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400'
                   : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400'
               }`}
-              title={muted ? 'Unmute' : 'Mute'}
+              title={muted ? 'Resume conversation' : 'Pause conversation'}
             >
               {muted ? <MicOffIcon /> : <MicIcon />}
             </button>

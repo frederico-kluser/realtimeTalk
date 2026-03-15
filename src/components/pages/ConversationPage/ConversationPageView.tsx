@@ -33,6 +33,7 @@ export function ConversationPageView(props: ConversationViewProps) {
     isActive,
     handleConnect,
     handleDisconnect,
+    handleToggleMute,
   } = props;
 
   return (
@@ -83,7 +84,7 @@ export function ConversationPageView(props: ConversationViewProps) {
         isActive={isActive}
         error={session.error}
         muted={audioControls.muted}
-        onToggleMute={audioControls.toggleMute}
+        onToggleMute={handleToggleMute}
         onConnect={() => void handleConnect()}
         onDisconnect={() => void handleDisconnect()}
         getFrequencyData={audioControls.getFrequencyData}

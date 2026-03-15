@@ -9,4 +9,5 @@ export { Label } from './Label';
 export { SectionTitle } from './SectionTitle';
 export { EmptyState } from './EmptyState';
 export { MessageBubble } from './MessageBubble';
-export { BackIcon, SettingsIcon, ClockIcon, ChevronDownIcon, MicIcon, MicOffIcon } from './icons';
+export { BackIcon, SettingsIcon, ClockIcon, ChevronDownIcon, MicIcon, MicOffIcon, HelpCircleIcon, PauseIcon, PlayIcon } from './icons';
+export { HelpTooltip } from './HelpTooltip';

@@ -11,4 +11,5 @@ export {
   PersonalityFormVoiceSection,
   PersonalityFormRulesSection,
   PersonalityFormDeflectionsSection,
+  PersonalityFormFileContextSection,
 } from './PersonalityForm';
