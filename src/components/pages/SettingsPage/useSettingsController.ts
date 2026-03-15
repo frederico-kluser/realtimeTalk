@@ -1,7 +1,9 @@
 import { useState } from 'react';
 import { apiKeyManager } from '@/storage/keyManager';
+import { useT } from '@/i18n';
 
 export function useSettingsController() {
+  const t = useT();
   const [apiKey, setApiKey] = useState('');
   const [passphrase, setPassphrase] = useState('');
   const [saved, setSaved] = useState(false);
@@ -11,7 +13,7 @@ export function useSettingsController() {
     try {
       apiKeyManager.set(apiKey);
       setSaved(true);
-      setMessage('API key saved to memory.');
+      setMessage(t.apiKeySaved);
     } catch (e) {
       setMessage((e as Error).message);
     }
@@ -19,24 +21,24 @@ export function useSettingsController() {
 
   const handlePersist = async () => {
     if (!passphrase) {
-      setMessage('Please enter a passphrase.');
+      setMessage(t.enterPassphrase);
       return;
     }
     await apiKeyManager.persistEncrypted(passphrase);
-    setMessage('API key encrypted and saved to localStorage.');
+    setMessage(t.apiKeyEncrypted);
   };
 
   const handleLoadKey = async () => {
     if (!passphrase) {
-      setMessage('Please enter your passphrase.');
+      setMessage(t.enterYourPassphrase);
       return;
     }
     const loaded = await apiKeyManager.loadEncrypted(passphrase);
     if (loaded) {
-      setMessage('API key loaded from encrypted storage.');
+      setMessage(t.apiKeyLoaded);
       setSaved(true);
     } else {
-      setMessage('Failed to decrypt. Wrong passphrase or no saved key.');
+      setMessage(t.decryptFailed);
     }
   };
 
@@ -45,7 +47,7 @@ export function useSettingsController() {
     apiKeyManager.clearPersisted();
     setApiKey('');
     setSaved(false);
-    setMessage('API key cleared from memory and storage.');
+    setMessage(t.apiKeyCleared);
   };
 
   return {
