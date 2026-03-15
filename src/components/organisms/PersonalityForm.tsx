@@ -1,8 +1,10 @@
+import { useRef } from 'react';
 import { Input } from '@/components/atoms/Input';
 import { Select } from '@/components/atoms/Select';
 import { Textarea } from '@/components/atoms/Textarea';
 import { SectionTitle } from '@/components/atoms/SectionTitle';
 import { TagInput } from '@/components/molecules/TagInput';
+import { Button } from '@/components/atoms/Button';
 import type { PersonalityConfig } from '@/personality/types';
 import type { RealtimeVoice } from '@/core/types/realtime';
 
@@ -118,6 +120,91 @@ export function PersonalityFormRulesSection({ config, onUpdate }: PersonalityFor
         badgeColor="red"
         borderColor="red"
       />
+    </section>
+  );
+}
+
+const READABLE_EXTENSIONS = [
+  '.txt', '.md', '.json', '.csv', '.xml', '.yaml', '.yml', '.html', '.css',
+  '.js', '.ts', '.tsx', '.jsx', '.py', '.rb', '.java', '.c', '.cpp', '.h',
+  '.sh', '.env', '.toml', '.ini', '.cfg', '.log', '.sql', '.graphql',
+];
+
+export function PersonalityFormFileContextSection({ config, onUpdate }: PersonalityFormProps) {
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const files = config.fileContexts ?? [];
+
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const selectedFiles = Array.from(e.target.files ?? []);
+    const newContexts: Array<{ name: string; content: string }> = [];
+
+    for (const file of selectedFiles) {
+      const ext = '.' + file.name.split('.').pop()?.toLowerCase();
+      if (!READABLE_EXTENSIONS.includes(ext) && file.type && !file.type.startsWith('text/')) {
+        alert(`File "${file.name}" is not a readable text file.`);
+        continue;
+      }
+      if (file.size > 500_000) {
+        alert(`File "${file.name}" exceeds 500KB limit.`);
+        continue;
+      }
+      const content = await file.text();
+      newContexts.push({ name: file.name, content });
+    }
+
+    if (newContexts.length > 0) {
+      onUpdate('fileContexts', [...files, ...newContexts]);
+    }
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+  const removeFile = (index: number) => {
+    const updated = files.filter((_, i) => i !== index);
+    onUpdate('fileContexts', updated);
+  };
+
+  return (
+    <section className="space-y-2">
+      <SectionTitle>File Context</SectionTitle>
+      <p className="text-xs text-gray-500 dark:text-gray-400">
+        Attach readable files (txt, md, json, csv, code, etc.) as reference context for this personality. Max 500KB per file.
+      </p>
+
+      <input
+        ref={fileInputRef}
+        type="file"
+        multiple
+        accept={READABLE_EXTENSIONS.join(',')}
+        onChange={(e) => void handleFileSelect(e)}
+        className="hidden"
+      />
+
+      <Button
+        variant="ghost"
+        size="sm"
+        onClick={() => fileInputRef.current?.click()}
+      >
+        + Attach Files
+      </Button>
+
+      {files.length > 0 && (
+        <ul className="space-y-1">
+          {files.map((f, i) => (
+            <li key={i} className="flex items-center justify-between bg-gray-100 dark:bg-gray-800 rounded px-3 py-1.5 text-sm">
+              <span className="truncate text-gray-700 dark:text-gray-300">{f.name}</span>
+              <span className="flex items-center gap-2 shrink-0 ml-2">
+                <span className="text-xs text-gray-400">{(f.content.length / 1024).toFixed(1)}KB</span>
+                <button
+                  onClick={() => removeFile(i)}
+                  className="text-red-500 hover:text-red-700 text-xs font-bold"
+                >
+                  x
+                </button>
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
     </section>
   );
 }

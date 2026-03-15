@@ -29,4 +29,8 @@ export interface PersonalityConfig {
     jailbreak: string;
     unknown: string;
   };
+  fileContexts?: Array<{
+    name: string;
+    content: string;
+  }>;
 }

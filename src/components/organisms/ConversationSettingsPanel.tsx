@@ -1,8 +1,10 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
+import { Link } from 'react-router-dom';
 import { Input } from '@/components/atoms/Input';
 import { Select } from '@/components/atoms/Select';
 import { Button } from '@/components/atoms/Button';
 import { Label } from '@/components/atoms/Label';
+import { HelpTooltip } from '@/components/atoms/HelpTooltip';
 import { apiKeyManager } from '@/storage/keyManager';
 import { PERSONALITY_PRESETS } from '@/personality/presets';
 import type { PersonalityConfig } from '@/personality/types';
@@ -25,7 +27,12 @@ const VAD_OPTIONS = [
   { value: 'high', label: 'High' },
 ];
 
-const PERSONALITY_OPTIONS = PERSONALITY_PRESETS.map((p) => ({ value: p.id, label: p.name }));
+const HELP_TEXT = {
+  model: 'Choose the AI model for voice conversation.\n\n• GPT Realtime — Full model, most capable\n• GPT Realtime Mini — Faster, lower cost\n• GPT Realtime 1.5 — Latest generation',
+  voice: 'Select the AI voice. Each voice has a distinct tone and character. Try different voices to find the best fit for your personality.',
+  vad: 'Voice Activity Detection (VAD) controls how eagerly the AI detects that you finished speaking.\n\n• Low — Waits longer before responding (good for thoughtful conversations)\n• Medium — Balanced timing\n• High — Responds quickly (good for rapid Q&A)\n• Auto — Let the model decide',
+  personality: 'Choose a personality profile that defines how the AI behaves, speaks, and responds. You can create custom personalities with file context in the editor.',
+};
 
 interface ConversationSettingsPanelProps {
   model: RealtimeModel;
@@ -51,6 +58,15 @@ export function ConversationSettingsPanel({
   isActive,
 }: ConversationSettingsPanelProps) {
   const [apiKey, setApiKey] = useState(apiKeyManager.hasKey() ? '••••••••' : '');
+
+  const allPersonalities = useMemo(() => {
+    const stored = JSON.parse(
+      localStorage.getItem('personalities') ?? '[]'
+    ) as PersonalityConfig[];
+    return [...PERSONALITY_PRESETS, ...stored];
+  }, []);
+
+  const personalityOptions = allPersonalities.map((p) => ({ value: p.id, label: p.name }));
 
   const handleSaveKey = () => {
     if (apiKey && !apiKey.startsWith('••')) {
@@ -82,7 +98,10 @@ export function ConversationSettingsPanel({
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
         <div>
-          <Label>Model</Label>
+          <div className="flex items-center gap-1">
+            <Label>Model</Label>
+            <HelpTooltip text={HELP_TEXT.model} />
+          </div>
           <Select
             value={model}
             onChange={(e) => onModelChange(e.target.value as RealtimeModel)}
@@ -91,7 +110,10 @@ export function ConversationSettingsPanel({
           />
         </div>
         <div>
-          <Label>Voice</Label>
+          <div className="flex items-center gap-1">
+            <Label>Voice</Label>
+            <HelpTooltip text={HELP_TEXT.voice} />
+          </div>
           <Select
             value={voice}
             onChange={(e) => onVoiceChange(e.target.value as RealtimeVoice)}
@@ -100,7 +122,10 @@ export function ConversationSettingsPanel({
           />
         </div>
         <div>
-          <Label>VAD</Label>
+          <div className="flex items-center gap-1">
+            <Label>VAD</Label>
+            <HelpTooltip text={HELP_TEXT.vad} />
+          </div>
           <Select
             value={vadEagerness}
             onChange={(e) => onVadEagernessChange(e.target.value as VADEagerness)}
@@ -109,15 +134,27 @@ export function ConversationSettingsPanel({
           />
         </div>
         <div>
-          <Label>Personality</Label>
+          <div className="flex items-center gap-1">
+            <Label>Personality</Label>
+            <HelpTooltip text={HELP_TEXT.personality} />
+          </div>
           <Select
             value={selectedPersonality.id}
             onChange={(e) => {
-              const p = PERSONALITY_PRESETS.find((p) => p.id === e.target.value);
+              const p = allPersonalities.find((p) => p.id === e.target.value);
               if (p) onPersonalityChange(p);
             }}
-            options={PERSONALITY_OPTIONS}
+            disabled={isActive}
+            options={personalityOptions}
           />
+          {!isActive && (
+            <Link
+              to="/personality"
+              className="text-xs text-indigo-500 hover:text-indigo-700 dark:text-indigo-400 mt-1 inline-block"
+            >
+              + New Personality
+            </Link>
+          )}
         </div>
       </div>
     </div>

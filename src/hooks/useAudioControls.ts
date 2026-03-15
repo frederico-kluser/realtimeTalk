@@ -24,6 +24,13 @@ export function useAudioControls(mediaStream: MediaStream | null) {
     };
   }, [mediaStream]);
 
+  // Reset muted state when mediaStream changes (new connection)
+  useEffect(() => {
+    if (!mediaStream) {
+      setMuted(false);
+    }
+  }, [mediaStream]);
+
   const toggleMute = useCallback(() => {
     if (!mediaStream) return;
     const newMuted = !muted;

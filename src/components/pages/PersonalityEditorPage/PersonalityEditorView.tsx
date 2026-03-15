@@ -7,6 +7,7 @@ import {
   PersonalityFormVoiceSection,
   PersonalityFormRulesSection,
   PersonalityFormDeflectionsSection,
+  PersonalityFormFileContextSection,
 } from '@/components/organisms/PersonalityForm';
 import type { usePersonalityEditorController } from './usePersonalityEditorController';
 
@@ -31,6 +32,7 @@ export function PersonalityEditorView({
         <PersonalityFormIdentitySection config={config} onUpdate={updateField} />
         <PersonalityFormVoiceSection config={config} onUpdate={updateField} />
         <PersonalityFormRulesSection config={config} onUpdate={updateField} />
+        <PersonalityFormFileContextSection config={config} onUpdate={updateField} />
         <PersonalityFormDeflectionsSection config={config} onUpdate={updateField} />
       </div>
     </PageLayout>
