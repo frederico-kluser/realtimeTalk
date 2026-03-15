@@ -7,7 +7,9 @@ interface AudioVisualizerProps {
 }
 
 export function AudioVisualizer({
-  getFrequencyData, isActive, color = '#6366f1'
+  getFrequencyData,
+  isActive,
+  color = '#6366f1',
 }: AudioVisualizerProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const animRef = useRef<number>(0);

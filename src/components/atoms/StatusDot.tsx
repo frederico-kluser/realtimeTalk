@@ -11,7 +11,7 @@ const STATUS_CONFIG: Record<SessionStatus, { label: string; color: string; anima
   disconnected: { label: 'Disconnected', color: 'bg-gray-300' },
 };
 
-export function StatusIndicator({ status }: { status: SessionStatus }) {
+export function StatusDot({ status }: { status: SessionStatus }) {
   const config = STATUS_CONFIG[status];
   return (
     <div className="flex items-center gap-2">
