@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
 import { HelpCircleIcon } from './icons';
 
 interface HelpTooltipProps {
@@ -19,12 +20,20 @@ export function HelpTooltip({ text }: HelpTooltipProps) {
       >
         <HelpCircleIcon />
       </button>
-      {open && (
-        <div className="absolute z-50 bottom-full left-1/2 -translate-x-1/2 mb-2 w-64 px-3 py-2 text-xs text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg shadow-lg whitespace-pre-line">
-          {text}
-          <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-px border-4 border-transparent border-t-white dark:border-t-gray-700" />
-        </div>
-      )}
+      <AnimatePresence>
+        {open && (
+          <motion.div
+            initial={{ opacity: 0, y: 5, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 5, scale: 0.95 }}
+            transition={{ type: 'spring', stiffness: 500, damping: 30 }}
+            className="absolute z-50 bottom-full left-1/2 -translate-x-1/2 mb-2 w-64 px-3 py-2 text-xs text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg shadow-lg whitespace-pre-line"
+          >
+            {text}
+            <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-px border-4 border-transparent border-t-white dark:border-t-gray-700" />
+          </motion.div>
+        )}
+      </AnimatePresence>
     </span>
   );
 }

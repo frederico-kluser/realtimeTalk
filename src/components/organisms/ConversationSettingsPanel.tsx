@@ -7,6 +7,7 @@ import { Label } from '@/components/atoms/Label';
 import { HelpTooltip } from '@/components/atoms/HelpTooltip';
 import { apiKeyManager } from '@/storage/keyManager';
 import { PERSONALITY_PRESETS } from '@/personality/presets';
+import { useT } from '@/i18n';
 import type { PersonalityConfig } from '@/personality/types';
 import type { RealtimeModel, RealtimeVoice, VADEagerness } from '@/core/types/realtime';
 
@@ -19,20 +20,6 @@ const MODEL_OPTIONS = [
 const VOICE_OPTIONS: { value: string; label: string }[] = [
   'alloy', 'ash', 'ballad', 'coral', 'echo', 'sage', 'shimmer', 'verse', 'marin', 'cedar',
 ].map((v) => ({ value: v, label: v }));
-
-const VAD_OPTIONS = [
-  { value: 'auto', label: 'Auto' },
-  { value: 'low', label: 'Low' },
-  { value: 'medium', label: 'Medium' },
-  { value: 'high', label: 'High' },
-];
-
-const HELP_TEXT = {
-  model: 'Choose the AI model for voice conversation.\n\n• GPT Realtime — Full model, most capable\n• GPT Realtime Mini — Faster, lower cost\n• GPT Realtime 1.5 — Latest generation',
-  voice: 'Select the AI voice. Each voice has a distinct tone and character. Try different voices to find the best fit for your personality.',
-  vad: 'Voice Activity Detection (VAD) controls how eagerly the AI detects that you finished speaking.\n\n• Low — Waits longer before responding (good for thoughtful conversations)\n• Medium — Balanced timing\n• High — Responds quickly (good for rapid Q&A)\n• Auto — Let the model decide',
-  personality: 'Choose a personality profile that defines how the AI behaves, speaks, and responds. You can create custom personalities with file context in the editor.',
-};
 
 interface ConversationSettingsPanelProps {
   model: RealtimeModel;
@@ -57,7 +44,15 @@ export function ConversationSettingsPanel({
   onPersonalityChange,
   isActive,
 }: ConversationSettingsPanelProps) {
+  const t = useT();
   const [apiKey, setApiKey] = useState(apiKeyManager.hasKey() ? '••••••••' : '');
+
+  const vadOptions = [
+    { value: 'auto', label: t.vadAuto },
+    { value: 'low', label: t.vadLow },
+    { value: 'medium', label: t.vadMedium },
+    { value: 'high', label: t.vadHigh },
+  ];
 
   const allPersonalities = useMemo(() => {
     const stored = JSON.parse(
@@ -82,7 +77,7 @@ export function ConversationSettingsPanel({
   return (
     <div className="border-b border-gray-200 dark:border-gray-700 px-4 py-3 bg-gray-50 dark:bg-gray-800/50 space-y-3">
       <div className="flex items-center gap-2">
-        <Label className="w-20">API Key</Label>
+        <Label className="w-20">{t.apiKey}</Label>
         <Input
           type="password"
           value={apiKey}
@@ -92,15 +87,15 @@ export function ConversationSettingsPanel({
           className="flex-1 py-1.5"
         />
         <Button variant="primary" size="xs" onClick={handleSaveKey}>
-          Save
+          {t.save}
         </Button>
       </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
         <div>
           <div className="flex items-center gap-1">
-            <Label>Model</Label>
-            <HelpTooltip text={HELP_TEXT.model} />
+            <Label>{t.model}</Label>
+            <HelpTooltip text={t.helpModel} />
           </div>
           <Select
             value={model}
@@ -111,8 +106,8 @@ export function ConversationSettingsPanel({
         </div>
         <div>
           <div className="flex items-center gap-1">
-            <Label>Voice</Label>
-            <HelpTooltip text={HELP_TEXT.voice} />
+            <Label>{t.voice}</Label>
+            <HelpTooltip text={t.helpVoice} />
           </div>
           <Select
             value={voice}
@@ -123,20 +118,20 @@ export function ConversationSettingsPanel({
         </div>
         <div>
           <div className="flex items-center gap-1">
-            <Label>VAD</Label>
-            <HelpTooltip text={HELP_TEXT.vad} />
+            <Label>{t.vad}</Label>
+            <HelpTooltip text={t.helpVad} />
           </div>
           <Select
             value={vadEagerness}
             onChange={(e) => onVadEagernessChange(e.target.value as VADEagerness)}
             disabled={isActive}
-            options={VAD_OPTIONS}
+            options={vadOptions}
           />
         </div>
         <div>
           <div className="flex items-center gap-1">
-            <Label>Personality</Label>
-            <HelpTooltip text={HELP_TEXT.personality} />
+            <Label>{t.personality}</Label>
+            <HelpTooltip text={t.helpPersonality} />
           </div>
           <Select
             value={selectedPersonality.id}
@@ -152,7 +147,7 @@ export function ConversationSettingsPanel({
               to="/personality"
               className="text-xs text-indigo-500 hover:text-indigo-700 dark:text-indigo-400 mt-1 inline-block"
             >
-              + New Personality
+              {t.newPersonality}
             </Link>
           )}
         </div>

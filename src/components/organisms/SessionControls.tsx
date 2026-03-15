@@ -1,6 +1,8 @@
+import { motion, AnimatePresence } from 'motion/react';
 import type { SessionStatus } from '@/hooks/useRealtimeSession';
 import { AudioVisualizer } from '@/components/molecules/AudioVisualizer';
 import { MicIcon, MicOffIcon } from '@/components/atoms/icons';
+import { useT } from '@/i18n';
 
 interface SessionControlsProps {
   status: SessionStatus;
@@ -23,39 +25,76 @@ export function SessionControls({
   onDisconnect,
   getFrequencyData,
 }: SessionControlsProps) {
-  return (
-    <div className="border-t border-gray-200 dark:border-gray-700 px-4 py-4">
-      <div className="flex flex-col items-center gap-3">
-        {isActive && !muted && (
-          <AudioVisualizer
-            getFrequencyData={getFrequencyData}
-            isActive={status === 'listening' || status === 'speaking'}
-          />
-        )}
+  const t = useT();
 
-        {isActive && muted && (
-          <div className="flex items-center gap-2 text-sm text-amber-600 dark:text-amber-400">
-            <span className="inline-block w-2 h-2 bg-amber-500 rounded-full animate-pulse" />
-            Paused — AI and microphone are on hold
-          </div>
-        )}
+  const buttonLabel = isActive
+    ? t.endSession
+    : status === 'connecting'
+      ? t.connecting
+      : t.startConversation;
+
+  return (
+    <motion.div
+      initial={{ y: 20, opacity: 0 }}
+      animate={{ y: 0, opacity: 1 }}
+      transition={{ type: 'spring', stiffness: 300, damping: 30, delay: 0.1 }}
+      className="border-t border-gray-200 dark:border-gray-700 px-4 py-4"
+    >
+      <div className="flex flex-col items-center gap-3">
+        <AnimatePresence>
+          {isActive && !muted && (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.8 }}
+              transition={{ type: 'spring', stiffness: 300, damping: 25 }}
+            >
+              <AudioVisualizer
+                getFrequencyData={getFrequencyData}
+                isActive={status === 'listening' || status === 'speaking'}
+              />
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        <AnimatePresence>
+          {isActive && muted && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              className="flex items-center gap-2 text-sm text-amber-600 dark:text-amber-400"
+            >
+              <span className="inline-block w-2 h-2 bg-amber-500 rounded-full animate-pulse" />
+              {t.pausedMessage}
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         <div className="flex items-center gap-3">
-          {isActive && (
-            <button
-              onClick={onToggleMute}
-              className={`p-3 rounded-full transition-colors ${
-                muted
-                  ? 'bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400'
-                  : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400'
-              }`}
-              title={muted ? 'Resume conversation' : 'Pause conversation'}
-            >
-              {muted ? <MicOffIcon /> : <MicIcon />}
-            </button>
-          )}
+          <AnimatePresence>
+            {isActive && (
+              <motion.button
+                initial={{ opacity: 0, scale: 0 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0 }}
+                transition={{ type: 'spring', stiffness: 500, damping: 25 }}
+                onClick={onToggleMute}
+                className={`p-3 rounded-full transition-colors ${
+                  muted
+                    ? 'bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400'
+                    : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400'
+                }`}
+                title={muted ? t.resumeConversation : t.pauseConversation}
+              >
+                {muted ? <MicOffIcon /> : <MicIcon />}
+              </motion.button>
+            )}
+          </AnimatePresence>
 
-          <button
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
             onClick={isActive ? onDisconnect : onConnect}
             disabled={status === 'connecting'}
             className={`px-8 py-3 rounded-full font-medium text-sm transition-all ${
@@ -66,12 +105,23 @@ export function SessionControls({
                   : 'bg-indigo-500 hover:bg-indigo-600 text-white'
             }`}
           >
-            {isActive ? 'End Session' : status === 'connecting' ? 'Connecting...' : 'Start Conversation'}
-          </button>
+            {buttonLabel}
+          </motion.button>
         </div>
 
-        {error && <p className="text-sm text-red-500">{error}</p>}
+        <AnimatePresence>
+          {error && (
+            <motion.p
+              initial={{ opacity: 0, y: 5 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 5 }}
+              className="text-sm text-red-500"
+            >
+              {error}
+            </motion.p>
+          )}
+        </AnimatePresence>
       </div>
-    </div>
+    </motion.div>
   );
 }

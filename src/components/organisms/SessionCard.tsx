@@ -1,6 +1,8 @@
+import { motion, AnimatePresence } from 'motion/react';
 import type { SessionRecord } from '@/storage/idb';
 import { formatCost } from '@/utils/costEstimator';
 import { ChevronDownIcon } from '@/components/atoms/icons';
+import { useT } from '@/i18n';
 
 interface SessionCardProps {
   session: SessionRecord;
@@ -17,6 +19,8 @@ function formatDuration(ms: number): string {
 }
 
 export function SessionCard({ session, isExpanded, onToggle, onDelete }: SessionCardProps) {
+  const t = useT();
+
   return (
     <div className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
       <button
@@ -30,37 +34,52 @@ export function SessionCard({ session, isExpanded, onToggle, onDelete }: Session
           </p>
           <p className="text-xs text-gray-500 dark:text-gray-400">
             {session.model} · {formatDuration(session.durationMs)} · {session.transcript.length}{' '}
-            messages · {formatCost(session.estimatedCostUsd)}
+            {t.messages} · {formatCost(session.estimatedCostUsd)}
           </p>
         </div>
-        <ChevronDownIcon className={`transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
+        <motion.div
+          animate={{ rotate: isExpanded ? 180 : 0 }}
+          transition={{ type: 'spring', stiffness: 300, damping: 25 }}
+        >
+          <ChevronDownIcon />
+        </motion.div>
       </button>
 
-      {isExpanded && (
-        <div className="px-4 pb-3 border-t border-gray-100 dark:border-gray-700/50">
-          <div className="mt-2 space-y-2 max-h-60 overflow-y-auto">
-            {session.transcript.map((entry, i) => (
-              <div
-                key={i}
-                className={`text-sm ${
-                  entry.role === 'user'
-                    ? 'text-indigo-600 dark:text-indigo-400'
-                    : 'text-gray-700 dark:text-gray-300'
-                }`}
-              >
-                <span className="font-medium">{entry.role === 'user' ? 'You' : 'AI'}:</span>{' '}
-                {entry.text}
-              </div>
-            ))}
-          </div>
-          <button
-            onClick={onDelete}
-            className="mt-2 text-xs text-red-500 hover:text-red-600"
+      <AnimatePresence>
+        {isExpanded && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+            className="overflow-hidden"
           >
-            Delete session
-          </button>
-        </div>
-      )}
+            <div className="px-4 pb-3 border-t border-gray-100 dark:border-gray-700/50">
+              <div className="mt-2 space-y-2 max-h-60 overflow-y-auto">
+                {session.transcript.map((entry, i) => (
+                  <div
+                    key={i}
+                    className={`text-sm ${
+                      entry.role === 'user'
+                        ? 'text-indigo-600 dark:text-indigo-400'
+                        : 'text-gray-700 dark:text-gray-300'
+                    }`}
+                  >
+                    <span className="font-medium">{entry.role === 'user' ? t.you : t.ai}:</span>{' '}
+                    {entry.text}
+                  </div>
+                ))}
+              </div>
+              <button
+                onClick={onDelete}
+                className="mt-2 text-xs text-red-500 hover:text-red-600"
+              >
+                {t.deleteSession}
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

@@ -1,6 +1,7 @@
 import { Input } from '@/components/atoms/Input';
 import { Button } from '@/components/atoms/Button';
 import { SectionTitle } from '@/components/atoms/SectionTitle';
+import { useT } from '@/i18n';
 
 interface ApiKeySectionProps {
   apiKey: string;
@@ -25,11 +26,13 @@ export function ApiKeySection({
   onLoadKey,
   onClearKey,
 }: ApiKeySectionProps) {
+  const t = useT();
+
   return (
     <section className="space-y-3">
-      <SectionTitle uppercase>API Key (BYOK)</SectionTitle>
+      <SectionTitle uppercase>{t.apiKeyByok}</SectionTitle>
       <p className="text-xs text-gray-500 dark:text-gray-400">
-        Your API key is stored in memory only. Optionally encrypt and persist it with a passphrase.
+        {t.apiKeyDescription}
       </p>
 
       <Input
@@ -40,7 +43,7 @@ export function ApiKeySection({
       />
 
       <Button variant="primary" size="sm" fullWidth onClick={onSaveKey} disabled={!apiKey}>
-        Save to Memory
+        {t.saveToMemory}
       </Button>
 
       <div className="border-t border-gray-200 dark:border-gray-700 pt-3 space-y-2">
@@ -48,20 +51,20 @@ export function ApiKeySection({
           type="password"
           value={passphrase}
           onChange={(e) => onPassphraseChange(e.target.value)}
-          placeholder="Encryption passphrase"
+          placeholder={t.encryptionPassphrase}
         />
         <div className="grid grid-cols-2 gap-2">
           <Button variant="ghost" size="sm" onClick={onPersist} disabled={!saved}>
-            Encrypt & Save
+            {t.encryptAndSave}
           </Button>
           <Button variant="ghost" size="sm" onClick={onLoadKey}>
-            Load Saved Key
+            {t.loadSavedKey}
           </Button>
         </div>
       </div>
 
       <Button variant="outline-danger" size="sm" fullWidth onClick={onClearKey}>
-        Clear All Key Data
+        {t.clearAllKeyData}
       </Button>
     </section>
   );

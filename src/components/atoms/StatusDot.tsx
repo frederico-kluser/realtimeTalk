@@ -1,24 +1,39 @@
+import { motion } from 'motion/react';
 import type { SessionStatus } from '@/hooks/useRealtimeSession';
+import { useT } from '@/i18n';
 
-const STATUS_CONFIG: Record<SessionStatus, { label: string; color: string; animate?: string }> = {
-  idle: { label: 'Idle', color: 'bg-gray-400' },
-  connecting: { label: 'Connecting...', color: 'bg-yellow-400', animate: 'animate-pulse' },
-  connected: { label: 'Connected', color: 'bg-green-400' },
-  listening: { label: 'Listening...', color: 'bg-blue-400', animate: 'animate-pulse' },
-  thinking: { label: 'Thinking...', color: 'bg-purple-400', animate: 'animate-bounce' },
-  speaking: { label: 'Speaking...', color: 'bg-indigo-400', animate: 'animate-pulse' },
-  error: { label: 'Error', color: 'bg-red-400' },
-  disconnected: { label: 'Disconnected', color: 'bg-gray-300' },
+type StatusConfig = { labelKey: string; color: string; pulse?: boolean; bounce?: boolean };
+
+const STATUS_CONFIG: Record<SessionStatus, StatusConfig> = {
+  idle: { labelKey: 'statusIdle', color: 'bg-gray-400' },
+  connecting: { labelKey: 'statusConnecting', color: 'bg-yellow-400', pulse: true },
+  connected: { labelKey: 'statusConnected', color: 'bg-green-400' },
+  listening: { labelKey: 'statusListening', color: 'bg-blue-400', pulse: true },
+  thinking: { labelKey: 'statusThinking', color: 'bg-purple-400', bounce: true },
+  speaking: { labelKey: 'statusSpeaking', color: 'bg-indigo-400', pulse: true },
+  error: { labelKey: 'statusError', color: 'bg-red-400' },
+  disconnected: { labelKey: 'statusDisconnected', color: 'bg-gray-300' },
 };
 
 export function StatusDot({ status }: { status: SessionStatus }) {
+  const t = useT();
   const config = STATUS_CONFIG[status];
+  const label = t[config.labelKey as keyof typeof t] as string;
+
   return (
-    <div className="flex items-center gap-2">
-      <div className={`w-2.5 h-2.5 rounded-full ${config.color} ${config.animate ?? ''}`} />
+    <motion.div
+      className="flex items-center gap-2"
+      initial={{ opacity: 0, scale: 0.8 }}
+      animate={{ opacity: 1, scale: 1 }}
+      key={status}
+      transition={{ type: 'spring', stiffness: 500, damping: 30 }}
+    >
+      <div
+        className={`w-2.5 h-2.5 rounded-full ${config.color} ${config.pulse ? 'animate-pulse' : ''} ${config.bounce ? 'animate-bounce' : ''}`}
+      />
       <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-        {config.label}
+        {label}
       </span>
-    </div>
+    </motion.div>
   );
 }

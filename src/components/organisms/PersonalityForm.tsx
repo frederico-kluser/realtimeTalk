@@ -5,6 +5,7 @@ import { Textarea } from '@/components/atoms/Textarea';
 import { SectionTitle } from '@/components/atoms/SectionTitle';
 import { TagInput } from '@/components/molecules/TagInput';
 import { Button } from '@/components/atoms/Button';
+import { useT } from '@/i18n';
 import type { PersonalityConfig } from '@/personality/types';
 import type { RealtimeVoice } from '@/core/types/realtime';
 
@@ -12,54 +13,58 @@ const VOICE_OPTIONS = [
   'alloy', 'ash', 'ballad', 'coral', 'echo', 'sage', 'shimmer', 'verse', 'marin', 'cedar',
 ].map((v) => ({ value: v, label: v }));
 
-const VERBOSITY_OPTIONS = [
-  { value: 'concise', label: 'Concise' },
-  { value: 'moderate', label: 'Moderate' },
-  { value: 'detailed', label: 'Detailed' },
-];
-
 interface PersonalityFormProps {
   config: PersonalityConfig;
   onUpdate: <K extends keyof PersonalityConfig>(key: K, value: PersonalityConfig[K]) => void;
 }
 
 export function PersonalityFormBasicSection({ config, onUpdate }: PersonalityFormProps) {
+  const t = useT();
+
   return (
     <section className="space-y-2">
-      <SectionTitle>Basic Info</SectionTitle>
+      <SectionTitle>{t.basicInfo}</SectionTitle>
+      <p className="text-xs text-gray-500 dark:text-gray-400">
+        {t.basicInfoDescription}
+      </p>
       <Input
         value={config.name}
         onChange={(e) => onUpdate('name', e.target.value)}
-        placeholder="Personality name"
+        placeholder={t.personalityName}
       />
     </section>
   );
 }
 
 export function PersonalityFormIdentitySection({ config, onUpdate }: PersonalityFormProps) {
+  const t = useT();
+
   return (
     <section className="space-y-2">
-      <SectionTitle>Identity</SectionTitle>
+      <SectionTitle>{t.identity}</SectionTitle>
+      <p className="text-xs text-gray-500 dark:text-gray-400">
+        {t.identityDescription}
+      </p>
       <Input
         value={config.identity.name}
         onChange={(e) => onUpdate('identity', { ...config.identity, name: e.target.value })}
-        placeholder="Character name"
+        placeholder={t.characterName}
       />
       <Input
         value={config.identity.role}
         onChange={(e) => onUpdate('identity', { ...config.identity, role: e.target.value })}
-        placeholder="Role (e.g., 'Tech Support Specialist')"
+        placeholder={t.rolePlaceholder}
       />
       <Textarea
         value={config.identity.backstory}
         onChange={(e) => onUpdate('identity', { ...config.identity, backstory: e.target.value })}
-        placeholder="Backstory"
+        placeholder={t.backstoryPlaceholder}
         rows={3}
       />
       <TagInput
         tags={config.identity.expertise}
         onTagsChange={(expertise) => onUpdate('identity', { ...config.identity, expertise })}
-        placeholder="Add expertise (Enter)"
+        placeholder={t.addExpertise}
         badgeColor="indigo"
       />
     </section>
@@ -67,9 +72,20 @@ export function PersonalityFormIdentitySection({ config, onUpdate }: Personality
 }
 
 export function PersonalityFormVoiceSection({ config, onUpdate }: PersonalityFormProps) {
+  const t = useT();
+
+  const verbosityOptions = [
+    { value: 'concise', label: t.verbosityConcise },
+    { value: 'moderate', label: t.verbosityModerate },
+    { value: 'detailed', label: t.verbosityDetailed },
+  ];
+
   return (
     <section className="space-y-2">
-      <SectionTitle>Voice</SectionTitle>
+      <SectionTitle>{t.voiceSection}</SectionTitle>
+      <p className="text-xs text-gray-500 dark:text-gray-400">
+        {t.voiceDescription}
+      </p>
       <Select
         value={config.voice.model_voice}
         onChange={(e) =>
@@ -80,7 +96,7 @@ export function PersonalityFormVoiceSection({ config, onUpdate }: PersonalityFor
       <Input
         value={config.voice.tone}
         onChange={(e) => onUpdate('voice', { ...config.voice, tone: e.target.value })}
-        placeholder="Tone (e.g., 'friendly, clear, empathetic')"
+        placeholder={t.tonePlaceholder}
       />
       <Select
         value={config.voice.verbosity}
@@ -90,33 +106,38 @@ export function PersonalityFormVoiceSection({ config, onUpdate }: PersonalityFor
             verbosity: e.target.value as 'concise' | 'moderate' | 'detailed',
           })
         }
-        options={VERBOSITY_OPTIONS}
+        options={verbosityOptions}
       />
     </section>
   );
 }
 
 export function PersonalityFormRulesSection({ config, onUpdate }: PersonalityFormProps) {
+  const t = useT();
+
   return (
     <section className="space-y-2">
-      <SectionTitle>Rules</SectionTitle>
+      <SectionTitle>{t.rules}</SectionTitle>
+      <p className="text-xs text-gray-500 dark:text-gray-400">
+        {t.rulesDescription}
+      </p>
       <Textarea
         value={config.rules.scope}
         onChange={(e) => onUpdate('rules', { ...config.rules, scope: e.target.value })}
-        placeholder="Scope of the assistant"
+        placeholder={t.scopePlaceholder}
         rows={2}
       />
       <TagInput
         tags={config.rules.always}
         onTagsChange={(always) => onUpdate('rules', { ...config.rules, always })}
-        placeholder="Always do... (Enter)"
+        placeholder={t.alwaysDoPlaceholder}
         badgeColor="green"
         borderColor="green"
       />
       <TagInput
         tags={config.rules.never}
         onTagsChange={(never) => onUpdate('rules', { ...config.rules, never })}
-        placeholder="Never do... (Enter)"
+        placeholder={t.neverDoPlaceholder}
         badgeColor="red"
         borderColor="red"
       />
@@ -131,6 +152,7 @@ const READABLE_EXTENSIONS = [
 ];
 
 export function PersonalityFormFileContextSection({ config, onUpdate }: PersonalityFormProps) {
+  const t = useT();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const files = config.fileContexts ?? [];
 
@@ -141,11 +163,11 @@ export function PersonalityFormFileContextSection({ config, onUpdate }: Personal
     for (const file of selectedFiles) {
       const ext = '.' + file.name.split('.').pop()?.toLowerCase();
       if (!READABLE_EXTENSIONS.includes(ext) && file.type && !file.type.startsWith('text/')) {
-        alert(`File "${file.name}" is not a readable text file.`);
+        alert(t.fileNotReadable.replace('{name}', file.name));
         continue;
       }
       if (file.size > 500_000) {
-        alert(`File "${file.name}" exceeds 500KB limit.`);
+        alert(t.fileTooBig.replace('{name}', file.name));
         continue;
       }
       const content = await file.text();
@@ -165,9 +187,9 @@ export function PersonalityFormFileContextSection({ config, onUpdate }: Personal
 
   return (
     <section className="space-y-2">
-      <SectionTitle>File Context</SectionTitle>
+      <SectionTitle>{t.fileContext}</SectionTitle>
       <p className="text-xs text-gray-500 dark:text-gray-400">
-        Attach readable files (txt, md, json, csv, code, etc.) as reference context for this personality. Max 500KB per file.
+        {t.fileContextDescription}
       </p>
 
       <input
@@ -184,7 +206,7 @@ export function PersonalityFormFileContextSection({ config, onUpdate }: Personal
         size="sm"
         onClick={() => fileInputRef.current?.click()}
       >
-        + Attach Files
+        {t.attachFiles}
       </Button>
 
       {files.length > 0 && (
@@ -210,29 +232,34 @@ export function PersonalityFormFileContextSection({ config, onUpdate }: Personal
 }
 
 export function PersonalityFormDeflectionsSection({ config, onUpdate }: PersonalityFormProps) {
+  const t = useT();
+
   return (
     <section className="space-y-2">
-      <SectionTitle>Deflection Responses</SectionTitle>
+      <SectionTitle>{t.deflectionResponses}</SectionTitle>
+      <p className="text-xs text-gray-500 dark:text-gray-400">
+        {t.deflectionDescription}
+      </p>
       <Input
         value={config.deflections.out_of_scope}
         onChange={(e) =>
           onUpdate('deflections', { ...config.deflections, out_of_scope: e.target.value })
         }
-        placeholder="Out of scope response"
+        placeholder={t.outOfScopePlaceholder}
       />
       <Input
         value={config.deflections.jailbreak}
         onChange={(e) =>
           onUpdate('deflections', { ...config.deflections, jailbreak: e.target.value })
         }
-        placeholder="Identity challenge response"
+        placeholder={t.jailbreakPlaceholder}
       />
       <Input
         value={config.deflections.unknown}
         onChange={(e) =>
           onUpdate('deflections', { ...config.deflections, unknown: e.target.value })
         }
-        placeholder="Unknown answer response"
+        placeholder={t.unknownPlaceholder}
       />
     </section>
   );

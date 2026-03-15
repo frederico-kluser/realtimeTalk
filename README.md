@@ -1,100 +1,174 @@
-# RealtimeTalk — Conversação por Voz em Tempo Real com IA
+# RealtimeTalk — Real-Time Voice Conversation with AI
 
-Aplicação 100% client-side para conversação por voz em tempo real com modelos de IA da OpenAI, conectando via WebRTC diretamente do browser — sem backend, sem banco de dados remoto, sem autenticação server-side.
+<p align="center">
+  <strong>A 100% client-side web application for real-time voice conversations with OpenAI AI models, connecting via WebRTC directly from the browser — no backend, no remote database, no server-side authentication.</strong>
+</p>
+
+<p align="center">
+  <a href="#features">Features</a> •
+  <a href="#quick-start">Quick Start</a> •
+  <a href="#architecture">Architecture</a> •
+  <a href="#internationalization">i18n</a> •
+  <a href="#custom-actions">Custom Actions</a> •
+  <a href="#contributing">Contributing</a> •
+  <a href="#faq">FAQ</a>
+</p>
 
 ---
 
-## O que o projeto faz
+## What It Does
 
-**RealtimeTalk** é uma aplicação web que permite conversar por voz com modelos de IA da OpenAI em tempo real. O áudio do microfone do usuário é transmitido diretamente para a OpenAI via WebRTC, e a resposta de voz do modelo é reproduzida no browser, tudo sem intermediários.
+**RealtimeTalk** is a web application that lets you have real-time voice conversations with OpenAI's AI models. Your microphone audio is transmitted directly to OpenAI via WebRTC, and the model's voice response is played back in the browser — all without intermediaries.
 
-### Funcionalidades implementadas
+## Features
 
-- **Conversação por voz bidirecional em tempo real** — fale com o microfone e ouça a resposta do modelo instantaneamente via WebRTC peer-to-peer
-- **Modelo BYOK (Bring Your Own Key)** — o usuário insere sua própria API key da OpenAI; a app gera um token efêmero (`client_secret`) e estabelece a conexão WebRTC
-- **Seleção de modelo** — suporte a `gpt-realtime`, `gpt-realtime-mini` e `gpt-realtime-1.5`
-- **10 vozes disponíveis** — alloy, ash, ballad, coral, echo, sage, shimmer, verse, marin e cedar
-- **VAD semântico configurável** — detecção de fim de fala baseada em semântica (não apenas silêncio), com controle de agressividade (`eagerness`: low, medium, high, auto)
-- **Transcrição em tempo real** — transcrição bidirecional (usuário e modelo) exibida durante a conversa
-- **Sistema de personalidade completo** — criação, edição e aplicação de personalidades com identidade, regras, tom de voz, tópicos proibidos e deflexões anti-jailbreak
-- **3 presets de personalidade** — Assistente Padrão, Suporte Técnico, Tutor de Idiomas
-- **Compilador de personalidade** — converte `PersonalityConfig` em system prompt otimizado com guardrails
-- **Troca de personalidade mid-session** — altera personalidade durante uma sessão ativa via `session.update`
-- **Action Registry tipado com Zod** — registro de ações TypeScript com validação de parâmetros, conversão automática Zod → JSON Schema para tools da OpenAI
-- **4 ações built-in** — `search_web` (mock), `create_reminder`, `get_current_time`, `log_interaction`
-- **Function calling completo** — modelo chama tool → handler executa → resultado volta → modelo continua falando
-- **Ações background** — ações que executam sem injetar resultado na conversa (ex: analytics)
-- **Memória conversacional persistente** — extração automática de fatos via GPT-4o-mini ao final da sessão, injeção dos últimos 20 fatos na próxima sessão
-- **Injeção de contexto dinâmico** — injeção de contexto de sistema e de usuário mid-session via `conversation.item.create`
-- **Template engine** — resolução de variáveis `{{variable}}` em prompts
-- **Histórico de sessões** — lista de sessões anteriores com transcrição, duração e metadados
-- **Export/Import de dados** — exportação completa (sessões, memórias, personalidades) como JSON; importação para restaurar
-- **Criptografia de API key** — AES-256-GCM com PBKDF2 (100K iterações), salt e IV aleatórios, armazenamento opcional em localStorage
-- **Estimativa de custo** — cálculo de custo por sessão baseado em tokens de texto e áudio (input/output/cached)
-- **Visualizador de áudio** — canvas com análise de frequência em tempo real (barras ou waveform) via Web Audio API
-- **Indicador de estado** — visual animado para todos os estados (idle, connecting, connected, listening, thinking, speaking, disconnected, error)
-- **PWA** — Progressive Web App com service worker, manifest, e suporte offline
+### Core
+- **Bidirectional real-time voice conversation** — speak and hear the AI respond instantly via peer-to-peer WebRTC
+- **BYOK (Bring Your Own Key)** — insert your own OpenAI API key; the app generates an ephemeral token and establishes the WebRTC connection
+- **Model selection** — support for `gpt-realtime`, `gpt-realtime-mini`, and `gpt-realtime-1.5`
+- **10 available voices** — alloy, ash, ballad, coral, echo, sage, shimmer, verse, marin, and cedar
+- **Configurable semantic VAD** — semantic end-of-speech detection with adjustable aggressiveness (low, medium, high, auto)
+- **Real-time transcription** — bidirectional transcription (user and model) displayed during conversation
+
+### Personality System
+- **Complete personality system** — create, edit, and apply personalities with identity, rules, tone of voice, forbidden topics, and anti-jailbreak deflections
+- **3 personality presets** — Default Assistant, Tech Support, Language Tutor
+- **Personality compiler** — converts `PersonalityConfig` to an optimized system prompt with guardrails
+- **Mid-session personality switch** — change personality during an active session via `session.update`
+
+### Actions & Function Calling
+- **Typed Action Registry with Zod** — TypeScript action registry with parameter validation, automatic Zod → JSON Schema conversion for OpenAI tools
+- **4 built-in actions** — `search_web` (mock), `create_reminder`, `get_current_time`, `log_interaction`
+- **Complete function calling** — model calls tool → handler executes → result returns → model continues speaking
+- **Background actions** — actions that execute without injecting results into the conversation (e.g., analytics)
+
+### Memory & Context
+- **Persistent conversational memory** — automatic fact extraction via GPT-4o-mini at session end, injection of last 20 facts in the next session
+- **Dynamic context injection** — system and user context injection mid-session via `conversation.item.create`
+- **Template engine** — `{{variable}}` resolution in prompts
+- **File context** — attach reference files to personalities for additional AI context
+
+### Data & Security
+- **Session history** — list of past sessions with transcription, duration, and metadata
+- **Export/Import** — complete data export (sessions, memories, personalities) as JSON; import to restore
+- **API key encryption** — AES-256-GCM with PBKDF2 (100K iterations), random salt and IV, optional localStorage storage
+- **Cost estimation** — per-session cost calculation based on text and audio tokens
+
+### UI & Experience
+- **Internationalization (i18n)** — English and Brazilian Portuguese, with automatic system language detection and manual language selector
+- **Fluid animations** — Motion (formerly Framer Motion) animations throughout the interface for a polished experience
+- **Audio visualizer** — canvas with real-time frequency analysis (bars or waveform) via Web Audio API
+- **State indicator** — animated visual for all states (idle, connecting, connected, listening, thinking, speaking, disconnected, error)
+- **FAQ page** — built-in frequently asked questions
+- **PWA** — Progressive Web App with service worker, manifest, and offline support
 - **Dark mode** — via Tailwind CSS
-- **Reconexão automática** — até 3 tentativas com backoff exponencial
-- **Deploy estático** — GitHub Pages via GitHub Actions
+- **Automatic reconnection** — up to 3 attempts with exponential backoff
+- **Static deploy** — GitHub Pages via GitHub Actions
 
 ---
 
-## O que o projeto NÃO faz
+## What It Does NOT Do
 
-- **Não tem backend** — tudo roda no browser; não existe servidor, API intermediária, nem proxy
-- **Não tem autenticação de usuários** — não há login, signup, sessões de usuário, nem controle de acesso
-- **Não tem banco de dados remoto** — toda persistência é local (IndexedDB + localStorage)
-- **Não faz busca web real** — a action `search_web` retorna dados mock; não consulta nenhuma API de busca
-- **Não suporta múltiplos idiomas na UI** — a interface é fixa em inglês; o modelo conversa no idioma configurado na personalidade, mas a UI não é internacionalizada
-- **Não tem testes automatizados** — não há unit tests, integration tests, nem E2E tests
-- **Não tem SSR/SSG** — é uma SPA pura sem server-side rendering
-- **Não tem rate limiting nem controle de gastos** — o custo é estimado mas não há limites configuráveis para proteger o usuário de gastos excessivos
-- **Não suporta múltiplas conversas simultâneas** — uma sessão WebRTC ativa por vez
-- **Não tem compartilhamento de sessões** — sessões são locais e não podem ser compartilhadas entre dispositivos/usuários
-- **Não grava áudio** — o áudio é transmitido em tempo real mas não é salvo; apenas a transcrição é persistida
-- **Não tem streaming de texto** — output é por áudio; texto é disponibilizado apenas via transcrição após o modelo falar
+- **No backend** — everything runs in the browser; no server, intermediary API, or proxy
+- **No user authentication** — no login, signup, user sessions, or access control
+- **No remote database** — all persistence is local (IndexedDB + localStorage)
+- **No real web search** — the `search_web` action returns mock data
+- **No automated tests** — no unit tests, integration tests, or E2E tests
+- **No SSR/SSG** — pure SPA without server-side rendering
+- **No rate limiting or spending control** — cost is estimated but no configurable limits
+- **No simultaneous conversations** — one active WebRTC session at a time
+- **No session sharing** — sessions are local and cannot be shared
+- **No audio recording** — audio is transmitted in real time but not saved; only transcription is persisted
 
 ---
 
-## Tecnologias empregadas
+## Quick Start
+
+### Prerequisites
+
+- **Node.js 20+**
+- **OpenAI API key** with Realtime API access
+- **Browser** with WebRTC and getUserMedia support (Chrome, Edge, Firefox, Safari 15+)
+- **HTTPS** in production (required for `getUserMedia` and Web Crypto API)
+
+### Installation
+
+```bash
+# Clone the repository
+git clone https://github.com/frederico-kluser/realtimeTalk.git
+cd realtimeTalk
+
+# Install dependencies
+npm install --legacy-peer-deps
+
+# Start development server
+npm run dev
+```
+
+The app will be available at `http://localhost:5173`.
+
+### Usage
+
+1. Open the app in your browser
+2. Click the **Settings** icon (gear) in the top-right corner
+3. Enter your **OpenAI API key** (starts with `sk-`)
+4. Click **Save** to store it in memory
+5. (Optional) Enter a passphrase and click **Encrypt & Save** for persistent encrypted storage
+6. Close settings and click **Start Conversation**
+7. Allow microphone access when prompted
+8. Start speaking — the AI will respond in real time!
+
+### Build for Production
+
+```bash
+# Type-check and build
+npm run build
+
+# Preview the build locally
+npm run preview
+```
+
+---
+
+## Technologies
 
 ### Core
 
-| Tecnologia | Versão | Propósito | Custo |
+| Technology | Version | Purpose | Cost |
 |---|---|---|---|
-| **React** | 19.2.4 | Framework UI com hooks | Grátis |
-| **TypeScript** | 5.9.3 | Tipagem estática, strict mode | Grátis |
-| **Vite** | 8.0.0 | Bundler e dev server com HMR | Grátis |
-| **Tailwind CSS** | 4.2.1 | Estilização utility-first com dark mode | Grátis |
-| **React Router DOM** | 7.13.1 | Roteamento client-side SPA | Grátis |
-| **Zod** | 4.3.6 | Validação runtime de schemas | Grátis |
-| **zod-to-json-schema** | 3.25.1 | Conversão Zod → JSON Schema para tools OpenAI | Grátis |
-| **idb** | 8.0.3 | Wrapper tipado para IndexedDB | Grátis |
-| **vite-plugin-pwa** | 1.2.0 | Service worker e PWA support | Grátis |
+| **React** | 19.2.4 | UI framework with hooks | Free |
+| **TypeScript** | 5.9.3 | Static typing, strict mode | Free |
+| **Vite** | 8.0.0 | Bundler and dev server with HMR | Free |
+| **Tailwind CSS** | 4.2.1 | Utility-first styling with dark mode | Free |
+| **Motion** | 12.x | Fluid UI animations (formerly Framer Motion) | Free |
+| **React Router DOM** | 7.13.1 | Client-side SPA routing | Free |
+| **Zod** | 4.3.6 | Runtime schema validation | Free |
+| **zod-to-json-schema** | 3.25.1 | Zod → JSON Schema conversion for OpenAI tools | Free |
+| **idb** | 8.0.3 | Typed IndexedDB wrapper | Free |
+| **vite-plugin-pwa** | 1.2.0 | Service worker and PWA support | Free |
 
-### APIs nativas do browser
+### Browser APIs
 
-| API | Propósito |
+| API | Purpose |
 |---|---|
-| **WebRTC** (`RTCPeerConnection`) | Conexão peer-to-peer com OpenAI Realtime API |
-| **MediaDevices** (`getUserMedia`) | Captura de áudio do microfone |
-| **Web Audio API** (`AnalyserNode`) | Análise de frequência para visualização |
-| **Web Crypto API** (`AES-GCM`, `PBKDF2`) | Criptografia de API keys |
-| **IndexedDB** | Persistência estruturada (sessões, memórias, personalidades) |
-| **localStorage** | Persistência simples (API keys criptografadas, personalidades, reminders) |
-| **Notification API** | Notificações de lembretes |
+| **WebRTC** (`RTCPeerConnection`) | Peer-to-peer connection with OpenAI Realtime API |
+| **MediaDevices** (`getUserMedia`) | Microphone audio capture |
+| **Web Audio API** (`AnalyserNode`) | Frequency analysis for visualization |
+| **Web Crypto API** (`AES-GCM`, `PBKDF2`) | API key encryption |
+| **IndexedDB** | Structured persistence (sessions, memories, personalities) |
+| **localStorage** | Simple persistence (encrypted API keys, personalities, reminders) |
+| **Notification API** | Reminder notifications |
 
-### APIs externas
+### External APIs
 
-| API | Propósito | Custo |
+| API | Purpose | Cost |
 |---|---|---|
-| **OpenAI Realtime API** (WebRTC) | Conversação por voz em tempo real | Pago pelo usuário (BYOK) |
-| **OpenAI Chat API** (`gpt-4o-mini`) | Extração de fatos para memória | Pago pelo usuário |
+| **OpenAI Realtime API** (WebRTC) | Real-time voice conversation | Paid by user (BYOK) |
+| **OpenAI Chat API** (`gpt-4o-mini`) | Fact extraction for memory | Paid by user |
 
 ---
 
-## Arquitetura
+## Architecture
 
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
@@ -129,146 +203,155 @@ Aplicação 100% client-side para conversação por voz em tempo real com modelo
 └──────────────────┘            └───────────────────────┘
 ```
 
-### Rotas
+### Routes
 
-| Rota | Componente | Descrição |
+| Route | Component | Description |
 |---|---|---|
-| `/` | `ConversationPage` | Interface principal de conversação |
-| `/settings` | `SettingsPage` | Gerenciamento de API key e configurações |
-| `/history` | `HistoryPage` | Histórico de sessões e export/import |
-| `/personality/:id?` | `PersonalityEditorPage` | Criação/edição de personalidades |
+| `/` | `ConversationPage` | Main conversation interface |
+| `/settings` | `SettingsPage` | API key management and settings |
+| `/history` | `HistoryPage` | Session history and export/import |
+| `/personality/:id?` | `PersonalityEditorPage` | Create/edit personalities |
+| `/faq` | `FaqPage` | Frequently asked questions |
 
 ---
 
-## Estrutura do projeto
+## Project Structure
 
-A aplicação segue **Atomic Design** para componentes UI e **Controller/View pattern** para separação de lógica e apresentação nas páginas.
+The application follows **Atomic Design** for UI components and **Controller/View pattern** for logic/presentation separation in pages.
 
 ```
 src/
-├── components/                     # Atomic Design component hierarchy
-│   ├── atoms/                      # Smallest UI primitives (no business logic)
-│   │   ├── Badge.tsx              # Tag/badge with optional remove
-│   │   ├── Button.tsx             # Multi-variant button (primary, danger, ghost, outline)
-│   │   ├── EmptyState.tsx         # Empty state placeholder message
-│   │   ├── IconButton.tsx         # Button wrapper for icon-only actions
-│   │   ├── Input.tsx              # Text input with border color variants
-│   │   ├── Label.tsx              # Form label
-│   │   ├── MessageBubble.tsx      # Chat message bubble (user/assistant)
-│   │   ├── SectionTitle.tsx       # Section heading
-│   │   ├── Select.tsx             # Dropdown select with typed options
-│   │   ├── StatusDot.tsx          # Session status indicator dot + label
-│   │   ├── Textarea.tsx           # Multi-line text input
-│   │   ├── icons.tsx              # SVG icon components (Back, Settings, Clock, Mic, etc.)
-│   │   └── index.ts               # Barrel export
-│   ├── molecules/                  # Combinations of atoms
-│   │   ├── AudioVisualizer.tsx    # Canvas frequency bar visualization
-│   │   ├── CostTokenDisplay.tsx   # Cost + token counter inline display
-│   │   ├── FormField.tsx          # Label + input wrapper
-│   │   ├── StatusMessage.tsx      # Feedback message bar
-│   │   ├── TagInput.tsx           # Input + tag list with add/remove
-│   │   └── index.ts
-│   ├── organisms/                  # Complex UI sections
-│   │   ├── ActionLogPanel.tsx     # Recent action execution log
-│   │   ├── ApiKeySection.tsx      # API key management form
-│   │   ├── AppHeader.tsx          # Page header with back nav + actions
-│   │   ├── ConversationSettingsPanel.tsx  # Model/voice/VAD/personality config
-│   │   ├── PersonalityForm.tsx    # Personality editor form sections
-│   │   ├── SessionCard.tsx        # Expandable session history card
-│   │   ├── SessionControls.tsx    # Connect/disconnect + mute + visualizer
-│   │   ├── TranscriptPanel.tsx    # Scrollable message transcript
-│   │   └── index.ts
-│   ├── templates/                  # Page layout wrappers
-│   │   ├── ContentLayout.tsx      # Scrollable content area with max-width
-│   │   ├── PageLayout.tsx         # Full-screen flex column container
-│   │   └── index.ts
-│   └── pages/                      # Page components (Controller + View)
+├── i18n/                          # Internationalization
+│   ├── en.ts                     # English translations
+│   ├── pt.ts                     # Portuguese translations
+│   ├── I18nContext.tsx           # React context + provider + hooks
+│   └── index.ts                  # Barrel export
+├── components/                    # Atomic Design component hierarchy
+│   ├── atoms/                    # Smallest UI primitives (no business logic)
+│   ├── molecules/                # Combinations of atoms
+│   ├── organisms/                # Complex UI sections
+│   ├── templates/                # Page layout wrappers
+│   └── pages/                    # Page components (Controller + View)
 │       ├── ConversationPage/
-│       │   ├── index.tsx                    # Connects controller → view
-│       │   ├── useConversationController.ts # All state & business logic
-│       │   └── ConversationPageView.tsx     # Pure render (no useState)
 │       ├── HistoryPage/
-│       │   ├── index.tsx
-│       │   ├── useHistoryController.ts
-│       │   └── HistoryPageView.tsx
 │       ├── SettingsPage/
-│       │   ├── index.tsx
-│       │   ├── useSettingsController.ts
-│       │   └── SettingsPageView.tsx
-│       └── PersonalityEditorPage/
-│           ├── index.tsx
-│           ├── usePersonalityEditorController.ts
-│           └── PersonalityEditorView.tsx
-├── hooks/                          # Shared React hooks
-│   ├── useRealtimeSession.ts      # Core: WebRTC + session lifecycle
-│   ├── useAudioControls.ts       # Mute + frequency analysis
-│   ├── useActionRegistry.ts      # Function calling + action log
-│   ├── usePersonality.ts         # Apply/save personalities
-│   ├── useMemory.ts              # Memory extraction/injection
-│   └── useContextInjection.ts    # Dynamic context mid-session
-├── core/                           # Engine e infraestrutura
-│   ├── types/realtime.ts          # OpenAI Realtime API type definitions
-│   ├── webrtc/ephemeralToken.ts   # Ephemeral token generation
-│   ├── events/eventEmitter.ts     # Typed event emitter
-│   └── contextWindow.ts           # Context window management (pruning)
-├── actions/                        # Action Registry + handlers
-│   ├── registry.ts                # Typed registry with Zod
-│   └── appActions.ts              # 4 built-in actions
-├── personality/                    # Personality system
-│   ├── types.ts                   # PersonalityConfig interface
-│   ├── compiler.ts                # Config → system prompt
-│   └── presets.ts                 # 3 presets
-├── storage/                        # Local persistence
-│   ├── idb.ts                     # IndexedDB (sessions, memories, personalities)
-│   ├── keyManager.ts              # AES-256-GCM API key encryption
-│   └── exportImport.ts            # Export/Import JSON
-├── utils/
-│   └── costEstimator.ts           # Cost calculation per model
-├── App.tsx                         # React Router
-├── main.tsx                        # Entry point
-└── index.css                       # Tailwind CSS
+│       ├── PersonalityEditorPage/
+│       └── FaqPage/
+├── hooks/                         # Shared React hooks
+├── core/                          # Engine and infrastructure
+├── actions/                       # Action Registry + handlers
+├── personality/                   # Personality system
+├── storage/                       # Local persistence
+├── utils/                         # Utilities
+├── App.tsx                        # React Router + I18nProvider
+├── main.tsx                       # Entry point
+└── index.css                      # Tailwind CSS
 ```
 
-### Padrões arquiteturais
+### Architectural Patterns
 
-#### Atomic Design (componentes)
+#### Controller/View Pattern (Pages)
 
-| Nível | Descrição | Exemplos |
-|---|---|---|
-| **Atoms** | Menores unidades UI reutilizáveis, sem lógica de negócio | `Button`, `Input`, `Select`, `Badge`, `StatusDot` |
-| **Molecules** | Combinações de átomos com comportamento isolado | `TagInput`, `AudioVisualizer`, `CostTokenDisplay` |
-| **Organisms** | Seções complexas da UI compostas por moléculas e átomos | `SessionControls`, `TranscriptPanel`, `AppHeader` |
-| **Templates** | Layouts estruturais que definem o esqueleto da página | `PageLayout`, `ContentLayout` |
-| **Pages** | Páginas completas com controller/view separation | `ConversationPage`, `HistoryPage` |
+Each page is split into 3 files:
+- **`index.tsx`** — connects controller to view (5-6 lines)
+- **`use[Page]Controller.ts`** — all state logic and side effects (hooks, callbacks)
+- **`[Page]View.tsx`** — pure render, receives props from controller, no `useState`
 
-#### Controller/View Pattern (páginas)
+#### Key Rules
 
-Cada página é dividida em 3 arquivos:
-- **`index.tsx`** — conecta controller ao view (5-6 linhas)
-- **`use[Page]Controller.ts`** — toda a lógica de estado e side effects (hooks, callbacks)
-- **`[Page]View.tsx`** — render puro, recebe props do controller, sem `useState`
+1. **No state in view files** — All `useState`, `useEffect`, `useCallback` live in controller hooks
+2. **Max 400 lines per file** — Split if exceeded
+3. **DRY** — Reuse atoms/molecules across pages
+4. **Barrel exports** — Each atomic level has an `index.ts` barrel export
+5. **Path aliases** — `@/` maps to `src/`
 
 ---
 
-## Como rodar
+## Internationalization
+
+RealtimeTalk supports **English** and **Brazilian Portuguese**.
+
+- **Automatic detection**: The app detects the browser's system language. If it's Portuguese (`pt-*`), the UI loads in Portuguese; otherwise, English is used
+- **Manual selection**: A language selector is available in the conversation page header and settings page
+- **Persistent preference**: Once you manually select a language, the choice is saved in localStorage
+
+Translation files are located in `src/i18n/`:
+- `en.ts` — English translations
+- `pt.ts` — Portuguese translations
+
+---
+
+## Custom Actions
+
+RealtimeTalk supports custom TypeScript actions that the AI can trigger during voice conversations. See the full guide:
+
+- **English**: [ACTION_TRIGGERS.md](./ACTION_TRIGGERS.md)
+- **Português**: [ACTION_TRIGGERS_PT.md](./ACTION_TRIGGERS_PT.md)
+
+---
+
+## FAQ
+
+### What is RealtimeTalk?
+A 100% client-side web app for real-time voice conversations with OpenAI's AI models via WebRTC.
+
+### Is my API key safe?
+Yes. Your API key never leaves your browser. It's stored only in memory during the session, with optional AES-256-GCM encrypted local storage.
+
+### What does BYOK mean?
+"Bring Your Own Key" — you use your own OpenAI API key and pay OpenAI directly.
+
+### Which browsers are supported?
+Chrome, Edge, Firefox, and Safari 15+ with WebRTC and getUserMedia support.
+
+### Can I use this offline?
+The PWA can be installed, but voice conversations require internet for the OpenAI Realtime API.
+
+---
+
+## Contributing
+
+Contributions are welcome! Here's how to get started:
+
+### Development Setup
 
 ```bash
-# Instalar dependências
-npm install
+# Clone and install
+git clone https://github.com/frederico-kluser/realtimeTalk.git
+cd realtimeTalk
+npm install --legacy-peer-deps
 
-# Desenvolvimento (localhost com HMR)
+# Start dev server
 npm run dev
 
-# Build de produção
-npm run build
+# Type-check
+npx tsc --noEmit
 
-# Preview do build
-npm run preview
+# Build
+npm run build
 ```
 
-### Pré-requisitos
+### Guidelines
 
-- Node.js 20+
-- API key da OpenAI com acesso à Realtime API
-- Browser com suporte a WebRTC e getUserMedia (Chrome, Edge, Firefox, Safari 15+)
-- HTTPS em produção (necessário para `getUserMedia` e Web Crypto API)
+1. **Follow the existing architecture** — Atomic Design for components, Controller/View for pages
+2. **Keep files under 400 lines** — Split large files into smaller modules
+3. **Use path aliases** — Import with `@/` instead of relative paths
+4. **Use i18n** — All user-facing strings should go through the translation system
+5. **Add Motion animations** — New components should use Motion for transitions and interactions
+6. **No state in view files** — All business logic goes in controller hooks
+7. **TypeScript strict mode** — All code must pass `tsc --noEmit`
+
+### Pull Request Process
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Make your changes following the guidelines above
+4. Ensure the build passes (`npm run build`)
+5. Commit with a descriptive message
+6. Push to your fork and open a Pull Request
+
+---
+
+## License
+
+This project is open source. See the repository for license details.
