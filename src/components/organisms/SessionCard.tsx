@@ -1,7 +1,7 @@
 import { motion, AnimatePresence } from 'motion/react';
 import type { SessionRecord } from '@/storage/idb';
 import { formatCost } from '@/utils/costEstimator';
-import { ChevronDownIcon } from '@/components/atoms/icons';
+import { ChevronDownIcon, ContinueIcon } from '@/components/atoms/icons';
 import { useT } from '@/i18n';
 
 interface SessionCardProps {
@@ -9,6 +9,7 @@ interface SessionCardProps {
   isExpanded: boolean;
   onToggle: () => void;
   onDelete: () => void;
+  onResume: () => void;
 }
 
 function formatDuration(ms: number): string {
@@ -18,7 +19,7 @@ function formatDuration(ms: number): string {
   return `${mins}m ${secs}s`;
 }
 
-export function SessionCard({ session, isExpanded, onToggle, onDelete }: SessionCardProps) {
+export function SessionCard({ session, isExpanded, onToggle, onDelete, onResume }: SessionCardProps) {
   const t = useT();
 
   return (
@@ -70,12 +71,22 @@ export function SessionCard({ session, isExpanded, onToggle, onDelete }: Session
                   </div>
                 ))}
               </div>
-              <button
-                onClick={onDelete}
-                className="mt-2 text-xs text-red-500 hover:text-red-600"
-              >
-                {t.deleteSession}
-              </button>
+              <div className="mt-2 flex items-center gap-3">
+                <button
+                  onClick={onResume}
+                  className="inline-flex items-center gap-1 text-xs text-indigo-500 hover:text-indigo-600 dark:text-indigo-400 dark:hover:text-indigo-300 font-medium"
+                  title={t.resumeSessionTooltip}
+                >
+                  <ContinueIcon />
+                  {t.resumeSession}
+                </button>
+                <button
+                  onClick={onDelete}
+                  className="text-xs text-red-500 hover:text-red-600"
+                >
+                  {t.deleteSession}
+                </button>
+              </div>
             </div>
           </motion.div>
         )}

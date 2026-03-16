@@ -151,6 +151,28 @@ export const pt: Translations = {
     },
   ],
 
+  // Context Modal
+  contextModalTitle: 'Contexto da Conversa',
+  contextModalDescription: 'Forneça um contexto opcional para esta conversa. Isso ajuda a IA a entender a situação e responder com mais precisão.',
+  contextModalPlaceholder: 'Ex.: "Preciso de ajuda para debugar um componente React" ou "Vamos praticar conversação em francês sobre viagens"...',
+  contextModalStart: 'Iniciar Conversa',
+  contextModalSkip: 'Pular',
+
+  // Resume conversation
+  resumeSession: 'Continuar',
+  resumeSessionTooltip: 'Continuar esta conversa',
+
+  // Edit personality
+  editPersonality: 'Editar',
+
+  // Settings descriptions
+  settingsSecurityTitle: 'Segurança e Privacidade',
+  settingsSecurityDescription: 'Sua chave API é armazenada apenas na memória do navegador durante a sessão ativa. Ela nunca é enviada para nenhum servidor além da OpenAI. Para armazenamento persistente, você pode criptografá-la com AES-256-GCM usando uma senha de sua escolha. A criptografia usa derivação de chave PBKDF2 com 100.000 iterações, um salt aleatório de 16 bytes e um IV aleatório de 12 bytes — tornando-a extremamente resistente a ataques de força bruta.',
+  settingsHowItWorks: 'Como Funciona',
+  settingsHowItWorksDescription: 'O RealtimeTalk conecta seu navegador diretamente à API Realtime da OpenAI via WebRTC. Não há backend, proxy ou servidor intermediário. O áudio do seu microfone é transmitido diretamente para a OpenAI, e a resposta de voz da IA é reproduzida em tempo real. Todos os dados de sessão (transcrições, memórias, personalidades) são armazenados localmente no seu navegador usando IndexedDB e localStorage.',
+  settingsDataOwnership: 'Propriedade dos Dados',
+  settingsDataOwnershipDescription: 'Você é dono de 100% dos seus dados. Nada é armazenado em servidores externos. Você pode exportar todos os seus dados (sessões, memórias, personalidades) como um arquivo JSON a qualquer momento pela página de Histórico, e importá-los de volta para restaurar seus dados em qualquer dispositivo.',
+
   // Language selector
   languageEnglish: 'English',
   languagePortuguese: 'Português',

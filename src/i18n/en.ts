@@ -149,6 +149,28 @@ export const en = {
     },
   ] as Array<{ question: string; answer: string }>,
 
+  // Context Modal
+  contextModalTitle: 'Conversation Context',
+  contextModalDescription: 'Provide optional context for this conversation. This helps the AI understand the situation and respond more accurately.',
+  contextModalPlaceholder: 'E.g.: "I need help debugging a React component" or "Let\'s practice French conversation about traveling"...',
+  contextModalStart: 'Start Conversation',
+  contextModalSkip: 'Skip',
+
+  // Resume conversation
+  resumeSession: 'Continue',
+  resumeSessionTooltip: 'Continue this conversation',
+
+  // Edit personality
+  editPersonality: 'Edit',
+
+  // Settings descriptions
+  settingsSecurityTitle: 'Security & Privacy',
+  settingsSecurityDescription: 'Your API key is stored only in your browser\'s memory during the active session. It is never sent to any server other than OpenAI. For persistent storage, you can encrypt it with AES-256-GCM using a passphrase of your choice. The encryption uses PBKDF2 key derivation with 100,000 iterations, a random 16-byte salt, and a random 12-byte IV — making it extremely resistant to brute-force attacks.',
+  settingsHowItWorks: 'How It Works',
+  settingsHowItWorksDescription: 'RealtimeTalk connects your browser directly to OpenAI\'s Realtime API via WebRTC. There is no backend, no proxy, and no intermediary server. Audio from your microphone is streamed directly to OpenAI, and the AI\'s voice response is played back in real time. All session data (transcripts, memories, personalities) is stored locally in your browser using IndexedDB and localStorage.',
+  settingsDataOwnership: 'Data Ownership',
+  settingsDataOwnershipDescription: 'You own 100% of your data. Nothing is stored on external servers. You can export all your data (sessions, memories, personalities) as a JSON file at any time from the History page, and import it back to restore your data on any device.',
+
   // Language selector
   languageEnglish: 'English',
   languagePortuguese: 'Português',

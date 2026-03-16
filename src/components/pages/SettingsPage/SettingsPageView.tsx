@@ -29,7 +29,7 @@ export function SettingsPageView({
     <PageLayout>
       <AppHeader title={t.settingsTitle} backTo="/" />
 
-      <ContentLayout>
+      <ContentLayout maxWidth="lg">
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
@@ -66,14 +66,35 @@ export function SettingsPageView({
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ type: 'spring', stiffness: 300, damping: 30, delay: 0.1 }}
-          className="space-y-2"
+          className="space-y-4"
         >
-          <SectionTitle uppercase>{t.about}</SectionTitle>
-          <p className="text-xs text-gray-500 dark:text-gray-400">
-            {t.aboutDescription}
+          <SectionTitle uppercase>{t.settingsSecurityTitle}</SectionTitle>
+          <p className="text-sm text-gray-600 dark:text-gray-300 leading-relaxed">
+            {t.settingsSecurityDescription}
           </p>
-          <p className="text-xs text-gray-500 dark:text-gray-400">
-            {t.aboutEncryption}
+        </motion.section>
+
+        <motion.section
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ type: 'spring', stiffness: 300, damping: 30, delay: 0.15 }}
+          className="space-y-4"
+        >
+          <SectionTitle uppercase>{t.settingsHowItWorks}</SectionTitle>
+          <p className="text-sm text-gray-600 dark:text-gray-300 leading-relaxed">
+            {t.settingsHowItWorksDescription}
+          </p>
+        </motion.section>
+
+        <motion.section
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ type: 'spring', stiffness: 300, damping: 30, delay: 0.2 }}
+          className="space-y-4"
+        >
+          <SectionTitle uppercase>{t.settingsDataOwnership}</SectionTitle>
+          <p className="text-sm text-gray-600 dark:text-gray-300 leading-relaxed">
+            {t.settingsDataOwnershipDescription}
           </p>
         </motion.section>
       </ContentLayout>

@@ -16,6 +16,7 @@ export function HistoryPageView({
   handleExport,
   handleImport,
   handleDeleteSession,
+  handleResumeSession,
 }: HistoryViewProps) {
   const t = useT();
 
@@ -51,6 +52,7 @@ export function HistoryPageView({
                 isExpanded={expandedId === session.id}
                 onToggle={() => toggleExpanded(session.id)}
                 onDelete={() => void handleDeleteSession(session.id)}
+                onResume={() => handleResumeSession(session)}
               />
             </motion.div>
           ))

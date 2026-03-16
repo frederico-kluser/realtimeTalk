@@ -1,5 +1,6 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
+import { PERSONALITY_PRESETS } from '@/personality/presets';
 import type { PersonalityConfig } from '@/personality/types';
 
 function createEmptyConfig(): PersonalityConfig {
@@ -17,7 +18,24 @@ function createEmptyConfig(): PersonalityConfig {
 
 export function usePersonalityEditorController() {
   const navigate = useNavigate();
+  const { id } = useParams<{ id: string }>();
   const [config, setConfig] = useState<PersonalityConfig>(createEmptyConfig());
+  const [isEditing, setIsEditing] = useState(false);
+
+  useEffect(() => {
+    if (id) {
+      // Try to load existing personality for editing
+      const stored = JSON.parse(
+        localStorage.getItem('personalities') ?? '[]'
+      ) as PersonalityConfig[];
+      const allPersonalities = [...PERSONALITY_PRESETS, ...stored];
+      const existing = allPersonalities.find((p) => p.id === id);
+      if (existing) {
+        setConfig({ ...existing });
+        setIsEditing(true);
+      }
+    }
+  }, [id]);
 
   const updateField = <K extends keyof PersonalityConfig>(
     key: K,
@@ -42,5 +60,6 @@ export function usePersonalityEditorController() {
     updateField,
     handleSave,
     canSave,
+    isEditing,
   };
 }
