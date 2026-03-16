@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import { useRealtimeSession } from '@/hooks/useRealtimeSession';
 import { useAudioControls } from '@/hooks/useAudioControls';
 import { useActionRegistry } from '@/hooks/useActionRegistry';
@@ -30,9 +31,14 @@ export function useConversationController() {
     PERSONALITY_PRESETS[0]!
   );
   const [showSettings, setShowSettings] = useState(false);
+  const [showContextModal, setShowContextModal] = useState(false);
+  const [pendingContext, setPendingContext] = useState<string>('');
+  const [resumingSession, setResumingSession] = useState<SessionRecord | null>(null);
 
+  const location = useLocation();
   const sessionStartRef = useRef<string>(new Date().toISOString());
   const sessionIdRef = useRef<string>(crypto.randomUUID());
+  const resumeHandledRef = useRef(false);
 
   const handleTranscript = useCallback((text: string, role: 'user' | 'assistant') => {
     setTranscript((prev) => [...prev, { role, text, timestamp: new Date().toISOString() }]);
@@ -89,16 +95,13 @@ export function useConversationController() {
     const willBeMuted = !audioControls.muted;
 
     if (willBeMuted) {
-      // Cancel any in-progress AI response and clear input buffer
       session.sendEvent({ type: 'response.cancel' });
       session.sendEvent({ type: 'input_audio_buffer.clear' });
-      // Disable VAD so the AI won't try to respond while paused
       session.sendEvent({
         type: 'session.update',
         session: { turn_detection: null },
       });
     } else {
-      // Re-enable VAD when unpausing
       session.sendEvent({
         type: 'session.update',
         session: {
@@ -118,6 +121,40 @@ export function useConversationController() {
       personality.applyPersonality(selectedPersonality);
       void memory.loadAndInjectMemories(session.sendEvent);
       actionHandlers.syncTools();
+
+      // Inject user context if provided
+      if (pendingContext) {
+        session.sendEvent({
+          type: 'conversation.item.create',
+          item: {
+            type: 'message',
+            role: 'user',
+            content: [{ type: 'input_text', text: pendingContext }],
+          },
+        });
+        setPendingContext('');
+      }
+
+      // If resuming a session, inject previous transcript as context
+      if (resumingSession) {
+        const transcriptSummary = resumingSession.transcript
+          .map((t) => `${t.role === 'user' ? 'User' : 'Assistant'}: ${t.text}`)
+          .join('\n');
+
+        session.sendEvent({
+          type: 'conversation.item.create',
+          item: {
+            type: 'message',
+            role: 'system',
+            content: [{
+              type: 'input_text',
+              text: `# PREVIOUS CONVERSATION CONTEXT\nThe user is continuing a previous conversation. Here is the transcript from the previous session:\n\n${transcriptSummary}\n\nContinue the conversation naturally from where it left off. Reference previous topics when relevant.`,
+            }],
+          },
+        });
+        session.sendEvent({ type: 'response.create' });
+        setResumingSession(null);
+      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session.status]);
@@ -127,6 +164,12 @@ export function useConversationController() {
       setShowSettings(true);
       return;
     }
+    setShowContextModal(true);
+  }, []);
+
+  const handleContextSubmit = useCallback(async (context: string) => {
+    setShowContextModal(false);
+    setPendingContext(context);
     sessionStartRef.current = new Date().toISOString();
     sessionIdRef.current = crypto.randomUUID();
     setTranscript([]);
@@ -134,6 +177,51 @@ export function useConversationController() {
     setTotalTokens(0);
     await session.connect();
   }, [session]);
+
+  const handleContextClose = useCallback(() => {
+    setShowContextModal(false);
+  }, []);
+
+  const handleResumeSession = useCallback(async (sessionRecord: SessionRecord) => {
+    if (!apiKeyManager.hasKey()) {
+      setShowSettings(true);
+      return;
+    }
+
+    // Load the personality used in the original session
+    const allPersonalities = [
+      ...PERSONALITY_PRESETS,
+      ...JSON.parse(localStorage.getItem('personalities') ?? '[]') as PersonalityConfig[],
+    ];
+    const originalPersonality = allPersonalities.find((p) => p.id === sessionRecord.personalityId);
+    if (originalPersonality) {
+      setSelectedPersonality(originalPersonality);
+    }
+
+    // Set model from original session
+    setModel(sessionRecord.model as RealtimeModel);
+
+    // Load previous transcript into view
+    setTranscript([...sessionRecord.transcript]);
+    setResumingSession(sessionRecord);
+
+    sessionStartRef.current = new Date().toISOString();
+    sessionIdRef.current = crypto.randomUUID();
+    setTotalCost(0);
+    setTotalTokens(0);
+    await session.connect();
+  }, [session]);
+
+  // Handle resume session from navigation state (from History page)
+  useEffect(() => {
+    const state = location.state as { resumeSession?: SessionRecord } | null;
+    if (state?.resumeSession && !resumeHandledRef.current) {
+      resumeHandledRef.current = true;
+      void handleResumeSession(state.resumeSession);
+      window.history.replaceState({}, '');
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.state]);
 
   const handleDisconnect = useCallback(async () => {
     session.disconnect();
@@ -192,12 +280,16 @@ export function useConversationController() {
     setSelectedPersonality,
     showSettings,
     setShowSettings,
+    showContextModal,
     session,
     audioControls,
     actionHandlers,
     isActive,
     handleConnect,
+    handleContextSubmit,
+    handleContextClose,
     handleDisconnect,
     handleToggleMute,
+    handleResumeSession,
   };
 }

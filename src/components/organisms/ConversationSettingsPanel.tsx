@@ -5,6 +5,7 @@ import { Select } from '@/components/atoms/Select';
 import { Button } from '@/components/atoms/Button';
 import { Label } from '@/components/atoms/Label';
 import { HelpTooltip } from '@/components/atoms/HelpTooltip';
+import { EditIcon } from '@/components/atoms/icons';
 import { apiKeyManager } from '@/storage/keyManager';
 import { PERSONALITY_PRESETS } from '@/personality/presets';
 import { useT } from '@/i18n';
@@ -143,12 +144,22 @@ export function ConversationSettingsPanel({
             options={personalityOptions}
           />
           {!isActive && (
-            <Link
-              to="/personality"
-              className="text-xs text-indigo-500 hover:text-indigo-700 dark:text-indigo-400 mt-1 inline-block"
-            >
-              {t.newPersonality}
-            </Link>
+            <div className="flex items-center gap-3 mt-1">
+              <Link
+                to="/personality"
+                className="text-xs text-indigo-500 hover:text-indigo-700 dark:text-indigo-400 inline-block"
+              >
+                {t.newPersonality}
+              </Link>
+              <Link
+                to={`/personality/${selectedPersonality.id}`}
+                className="inline-flex items-center gap-1 text-xs text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                title={t.editPersonality}
+              >
+                <EditIcon />
+                {t.editPersonality}
+              </Link>
+            </div>
           )}
         </div>
       </div>

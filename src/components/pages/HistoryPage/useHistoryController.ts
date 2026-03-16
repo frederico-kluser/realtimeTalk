@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { getDB, type SessionRecord } from '@/storage/idb';
 import { exportAllData, importAllData } from '@/storage/exportImport';
 
 export function useHistoryController() {
+  const navigate = useNavigate();
   const [sessions, setSessions] = useState<SessionRecord[]>([]);
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
@@ -47,6 +49,10 @@ export function useHistoryController() {
     setSessions((prev) => prev.filter((s) => s.id !== id));
   }
 
+  function handleResumeSession(session: SessionRecord) {
+    navigate('/', { state: { resumeSession: session } });
+  }
+
   const toggleExpanded = (id: string) => {
     setExpandedId(expandedId === id ? null : id);
   };
@@ -58,5 +64,6 @@ export function useHistoryController() {
     handleExport,
     handleImport,
     handleDeleteSession,
+    handleResumeSession,
   };
 }

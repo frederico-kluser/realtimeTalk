@@ -9,6 +9,7 @@ import { TranscriptPanel } from '@/components/organisms/TranscriptPanel';
 import { ActionLogPanel } from '@/components/organisms/ActionLogPanel';
 import { ConversationSettingsPanel } from '@/components/organisms/ConversationSettingsPanel';
 import { SessionControls } from '@/components/organisms/SessionControls';
+import { ContextModal } from '@/components/molecules/ContextModal';
 import { SettingsIcon, ClockIcon, HelpCircleIcon } from '@/components/atoms/icons';
 import { useT } from '@/i18n';
 import type { useConversationController } from './useConversationController';
@@ -30,11 +31,14 @@ export function ConversationPageView(props: ConversationViewProps) {
     setSelectedPersonality,
     showSettings,
     setShowSettings,
+    showContextModal,
     session,
     audioControls,
     actionHandlers,
     isActive,
     handleConnect,
+    handleContextSubmit,
+    handleContextClose,
     handleDisconnect,
     handleToggleMute,
   } = props;
@@ -116,6 +120,12 @@ export function ConversationPageView(props: ConversationViewProps) {
         onConnect={() => void handleConnect()}
         onDisconnect={() => void handleDisconnect()}
         getFrequencyData={audioControls.getFrequencyData}
+      />
+
+      <ContextModal
+        isOpen={showContextModal}
+        onStart={(ctx) => void handleContextSubmit(ctx)}
+        onClose={handleContextClose}
       />
     </PageLayout>
   );
