@@ -1,14 +1,11 @@
 export { Button } from './Button';
 export { Input } from './Input';
 export { Select } from './Select';
-export { Textarea } from './Textarea';
-export { Badge } from './Badge';
 export { IconButton } from './IconButton';
 export { StatusDot } from './StatusDot';
-export { Label } from './Label';
-export { SectionTitle } from './SectionTitle';
-export { EmptyState } from './EmptyState';
-export { MessageBubble } from './MessageBubble';
-export { BackIcon, SettingsIcon, ClockIcon, ChevronDownIcon, MicIcon, MicOffIcon, HelpCircleIcon, PauseIcon, PlayIcon } from './icons';
-export { HelpTooltip } from './HelpTooltip';
 export { LanguageSelector } from './LanguageSelector';
+export {
+  BackIcon, SettingsIcon, ClockIcon, ChevronDownIcon,
+  MicIcon, MicOffIcon, HelpCircleIcon, PauseIcon, PlayIcon,
+  UploadIcon, ChatIcon, XIcon, EditIcon, ContinueIcon,
+} from './icons';

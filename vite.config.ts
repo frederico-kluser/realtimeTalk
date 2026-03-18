@@ -11,13 +11,13 @@ export default defineConfig({
     VitePWA({
       registerType: 'autoUpdate',
       manifest: {
-        name: 'Voice AI App',
-        short_name: 'VoiceAI',
-        description: 'Real-time voice conversation with AI',
-        theme_color: '#6366f1',
+        name: 'Financial Sheets — Voice-Powered Spreadsheet',
+        short_name: 'FinSheets',
+        description: 'Voice-powered financial spreadsheet management with AI',
+        theme_color: '#059669',
         background_color: '#0f172a',
         display: 'standalone',
-        orientation: 'portrait',
+        orientation: 'any',
         icons: [
           { src: 'pwa-192x192.png', sizes: '192x192', type: 'image/png' },
           { src: 'pwa-512x512.png', sizes: '512x512', type: 'image/png' },
@@ -26,6 +26,7 @@ export default defineConfig({
       workbox: {
         globPatterns: ['**/*.{js,css,html,svg,png}'],
         navigateFallback: 'index.html',
+        maximumFileSizeToCacheInBytes: 10 * 1024 * 1024,
         runtimeCaching: [],
       },
     }),
