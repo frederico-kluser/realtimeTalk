@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useRealtimeSession } from '@/hooks/useRealtimeSession';
 import { useAudioControls } from '@/hooks/useAudioControls';
 import { useActionRegistry } from '@/hooks/useActionRegistry';
+import { useAdaptiveVAD } from '@/hooks/useAdaptiveVAD';
 import { spreadsheetActions, setSpreadsheetRef } from '@/actions/spreadsheetActions';
 import type { SpreadsheetHandle } from '@/hooks/useSpreadsheet';
 import type {
@@ -18,27 +19,28 @@ interface TranscriptEntry {
   timestamp: string;
 }
 
-const SYSTEM_PROMPT = `You are a financial spreadsheet assistant. You help users manage, analyze, and modify spreadsheet data through voice commands.
+// Concise, markdown-formatted prompt optimized for GPT Realtime 1.5.
+// Follows 2025-2026 best practices: <300 words, no role prompting,
+// specific instructions, markdown delimiters.
+const SYSTEM_PROMPT = `# Spreadsheet Voice Assistant
 
-CAPABILITIES:
-- Read and write cell values
-- Create formulas (SUM, AVERAGE, COUNT, IF, VLOOKUP, etc.)
-- Format cells (bold, colors, number formats like currency and percentage)
-- Insert and delete rows/columns
-- Create financial tables, budgets, expense trackers, invoices
-- Analyze data and provide insights
+## Workflow
+1. Call **get_sheet_summary** before reading or modifying existing data.
+2. Make changes using the available tools.
+3. Confirm briefly what you did — the user sees the spreadsheet live.
 
-RULES:
-1. ALWAYS use the get_sheet_summary tool first when the user asks about existing data, before making modifications.
-2. Use cell references (A1, B2, etc.) when manipulating the spreadsheet.
-3. When creating tables, always set bold headers in row 1 and format numbers appropriately.
-4. For currency values, apply "$#,##0.00" number format. For percentages, use "0.00%".
-5. After making changes, briefly confirm what you did.
-6. When the user asks to "create a budget" or similar, generate a complete structure with headers, sample data, and formulas.
-7. Be concise in your spoken responses — the user can see the changes in the spreadsheet.
-8. If the user's request is ambiguous, ask for clarification.
-9. For financial calculations, always use formulas so values update automatically.
-10. Format headers with bold text and a colored background for visibility.`;
+## When creating tables
+- Bold headers in row 1 with colored background.
+- Use formulas (SUM, AVERAGE, IF, VLOOKUP) so values auto-update.
+- Currency: "$#,##0.00". Percentages: "0.00%".
+
+## Undo support
+- When the user says "undo", "revert", or "go back", call **undo_last_change**.
+- You can undo multiple steps by calling it repeatedly.
+
+## Rules
+- Ask for clarification if the request is ambiguous.
+- Be concise in spoken responses.`;
 
 export function useSpreadsheetController() {
   const [voice, setVoice] = useState<RealtimeVoice>('marin');
@@ -60,6 +62,10 @@ export function useSpreadsheetController() {
       if (event.type === 'response.done') {
         const done = event as ResponseDoneEvent;
         void actionHandlers.handleResponseDone(done);
+      }
+      // Feed speech events to adaptive VAD
+      if (event.type === 'input_audio_buffer.speech_started') {
+        adaptiveVAD.onSpeechStarted();
       }
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -83,12 +89,18 @@ export function useSpreadsheetController() {
       },
     },
     onEvent: handleEvent,
-    onTranscript: handleTranscript,
+    onTranscript: (text, role) => {
+      handleTranscript(text, role);
+      if (role === 'user') {
+        adaptiveVAD.onTranscriptReceived();
+      }
+    },
     onError: (err) => console.error('Session error:', err),
   });
 
   const audioControls = useAudioControls(session.mediaStream);
   const actionHandlers = useActionRegistry(spreadsheetActions, session);
+  const adaptiveVAD = useAdaptiveVAD(session, vadEagerness);
 
   const handleToggleMute = useCallback(() => {
     audioControls.toggleMute();
@@ -107,20 +119,19 @@ export function useSpreadsheetController() {
         session: {
           turn_detection: {
             type: 'semantic_vad',
-            eagerness: vadEagerness,
+            eagerness: adaptiveVAD.eagerness,
             create_response: true,
             interrupt_response: true,
           },
         },
       });
     }
-  }, [audioControls, session, vadEagerness]);
+  }, [audioControls, session, adaptiveVAD.eagerness]);
 
   useEffect(() => {
     if (session.status === 'connected') {
       actionHandlers.syncTools();
 
-      // Inject current spreadsheet context
       if (spreadsheetHandleRef.current) {
         const summary = spreadsheetHandleRef.current.getSheetSummary();
         session.sendEvent({
@@ -173,20 +184,19 @@ export function useSpreadsheetController() {
     const file = e.target.files?.[0];
     if (!file || !spreadsheetHandleRef.current) return;
 
-    const { read, utils } = await import('xlsx');
+    const ExcelJS = await import('exceljs');
+    const { convertExcelJSToUniver } = await import('@/utils/xlsxImporter');
+
+    const workbook = new ExcelJS.Workbook();
     const buffer = await file.arrayBuffer();
-    const workbook = read(buffer);
-    const sheetName = workbook.SheetNames[0];
-    if (!sheetName) return;
+    await workbook.xlsx.load(buffer);
 
-    const worksheet = workbook.Sheets[sheetName]!;
-    const jsonData = utils.sheet_to_json<(string | number)[]>(worksheet, { header: 1 });
+    const { workbookData, numberFormats } = convertExcelJSToUniver(
+      workbook as unknown as Parameters<typeof convertExcelJSToUniver>[0]
+    );
 
-    if (jsonData.length > 0) {
-      spreadsheetHandleRef.current.setRangeValues(0, 0, jsonData);
-    }
+    spreadsheetHandleRef.current.importWorkbook(workbookData, numberFormats);
 
-    // Reset file input
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }

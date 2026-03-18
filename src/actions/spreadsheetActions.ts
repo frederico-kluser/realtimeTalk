@@ -12,12 +12,39 @@ function colIndex(letter: string): number {
   return letter.toUpperCase().charCodeAt(0) - 65;
 }
 
+// ─── Undo / Change History ──────────────────────────────────────────────
+interface ChangeEntry {
+  actionName: string;
+  description: string;
+  undo: () => void;
+}
+
+const changeHistory: ChangeEntry[] = [];
+const MAX_HISTORY = 20;
+
+function pushChange(actionName: string, description: string, undoFn: () => void) {
+  changeHistory.push({ actionName, description, undo: undoFn });
+  if (changeHistory.length > MAX_HISTORY) changeHistory.shift();
+}
+
+export function getLastChange(): ChangeEntry | undefined {
+  return changeHistory[changeHistory.length - 1];
+}
+
+export function popLastChange(): ChangeEntry | undefined {
+  return changeHistory.pop();
+}
+
+export function getChangeHistoryLength(): number {
+  return changeHistory.length;
+}
+
 export const spreadsheetActions = createActionRegistry({
   set_cell_value: {
-    description: 'Set the value of a single cell in the spreadsheet. Use when the user asks to write, set, change, or update a specific cell value.',
+    description: 'Write a value to one cell.',
     parameters: z.object({
-      cell: z.string().describe('Cell reference like "A1", "B3", "C10"'),
-      value: z.union([z.string(), z.number()]).describe('The value to set — text, number, or formula starting with "="'),
+      cell: z.string().describe('Cell reference like "A1"'),
+      value: z.union([z.string(), z.number()]).describe('Text, number, or formula starting with "="'),
     }),
     handler: async ({ cell, value }: { cell: string; value: string | number }) => {
       if (!spreadsheetRef) return { error: 'Spreadsheet not ready' };
@@ -25,16 +52,26 @@ export const spreadsheetActions = createActionRegistry({
       if (!match) return { error: `Invalid cell reference: ${cell}` };
       const col = colIndex(match[1]!);
       const row = parseInt(match[2]!, 10) - 1;
+
+      const prev = spreadsheetRef.getCellValue(row, col);
       spreadsheetRef.setCellValue(row, col, value);
+      pushChange('set_cell_value', `Set ${cell} = ${value}`, () => {
+        if (prev !== null && prev !== undefined && prev !== '') {
+          spreadsheetRef!.setCellValue(row, col, prev as string | number);
+        } else {
+          spreadsheetRef!.clearRange(row, col, row, col);
+        }
+      });
+
       return { success: true, cell, value };
     },
   },
 
   set_range_values: {
-    description: 'Set values for a range of cells at once. Use when the user asks to fill multiple cells, create a table, or populate data in rows/columns.',
+    description: 'Fill multiple cells at once with a 2D array of values.',
     parameters: z.object({
       startCell: z.string().describe('Top-left cell like "A1"'),
-      values: z.array(z.array(z.union([z.string(), z.number()]))).describe('2D array of values — each inner array is a row'),
+      values: z.array(z.array(z.union([z.string(), z.number()]))).describe('2D array — each inner array is a row'),
     }),
     handler: async ({ startCell, values }: { startCell: string; values: (string | number)[][] }) => {
       if (!spreadsheetRef) return { error: 'Spreadsheet not ready' };
@@ -42,16 +79,28 @@ export const spreadsheetActions = createActionRegistry({
       if (!match) return { error: `Invalid cell reference: ${startCell}` };
       const col = colIndex(match[1]!);
       const row = parseInt(match[2]!, 10) - 1;
+      const numRows = values.length;
+      const numCols = Math.max(...values.map(r => r.length));
+
+      const prev = spreadsheetRef.getCellsInRange(row, col, row + numRows - 1, col + numCols - 1);
       spreadsheetRef.setRangeValues(row, col, values);
-      return { success: true, startCell, rows: values.length, cols: values[0]?.length ?? 0 };
+      pushChange('set_range_values', `Set ${numRows}x${numCols} range from ${startCell}`, () => {
+        spreadsheetRef!.clearRange(row, col, row + numRows - 1, col + numCols - 1);
+        if (prev.length > 0) {
+          const restored = prev.map(r => r.map(v => (v ?? '') as string | number));
+          spreadsheetRef!.setRangeValues(row, col, restored);
+        }
+      });
+
+      return { success: true, startCell, rows: numRows, cols: numCols };
     },
   },
 
   set_cell_formula: {
-    description: 'Set a formula in a specific cell. Use when the user asks to calculate, sum, average, or create formulas.',
+    description: 'Set a formula in a cell (SUM, AVERAGE, IF, VLOOKUP, etc.).',
     parameters: z.object({
       cell: z.string().describe('Cell reference like "A1"'),
-      formula: z.string().describe('Excel formula like "=SUM(A1:A10)", "=AVERAGE(B2:B50)", "=A1*B1"'),
+      formula: z.string().describe('Formula like "=SUM(A1:A10)"'),
     }),
     handler: async ({ cell, formula }: { cell: string; formula: string }) => {
       if (!spreadsheetRef) return { error: 'Spreadsheet not ready' };
@@ -60,13 +109,23 @@ export const spreadsheetActions = createActionRegistry({
       const col = colIndex(match[1]!);
       const row = parseInt(match[2]!, 10) - 1;
       const f = formula.startsWith('=') ? formula : `=${formula}`;
+
+      const prev = spreadsheetRef.getCellValue(row, col);
       spreadsheetRef.setCellFormula(row, col, f);
+      pushChange('set_cell_formula', `Formula ${f} in ${cell}`, () => {
+        if (prev !== null && prev !== undefined && prev !== '') {
+          spreadsheetRef!.setCellValue(row, col, prev as string | number);
+        } else {
+          spreadsheetRef!.clearRange(row, col, row, col);
+        }
+      });
+
       return { success: true, cell, formula: f };
     },
   },
 
   get_cell_value: {
-    description: 'Read the value of a cell. Use when the user asks what is in a cell, asks to check a value, or when you need to inspect data before modifying.',
+    description: 'Read one cell value.',
     parameters: z.object({
       cell: z.string().describe('Cell reference like "A1"'),
     }),
@@ -82,7 +141,7 @@ export const spreadsheetActions = createActionRegistry({
   },
 
   get_range_values: {
-    description: 'Read values from a range of cells. Use when you need to understand the current spreadsheet data, analyze content, or before making modifications.',
+    description: 'Read values from a cell range.',
     parameters: z.object({
       startCell: z.string().describe('Top-left cell like "A1"'),
       endCell: z.string().describe('Bottom-right cell like "D10"'),
@@ -102,7 +161,7 @@ export const spreadsheetActions = createActionRegistry({
   },
 
   get_sheet_summary: {
-    description: 'Get a summary of the current spreadsheet contents including headers, data preview, and dimensions. Use this to understand what data exists before making changes.',
+    description: 'Get spreadsheet dimensions, headers, and a data preview. Call this before modifying existing data.',
     parameters: z.object({}),
     handler: async () => {
       if (!spreadsheetRef) return { error: 'Spreadsheet not ready' };
@@ -112,69 +171,95 @@ export const spreadsheetActions = createActionRegistry({
   },
 
   insert_rows: {
-    description: 'Insert new empty rows into the spreadsheet. Use when the user asks to add rows or make space for new data.',
+    description: 'Insert empty rows.',
     parameters: z.object({
-      afterRow: z.number().describe('Row number after which to insert (1-based). Use 0 to insert at the top.'),
-      count: z.number().describe('Number of rows to insert').default(1),
+      afterRow: z.number().describe('Row number after which to insert (1-based). 0 = top.'),
+      count: z.number().describe('Number of rows').default(1),
     }),
     handler: async ({ afterRow, count }: { afterRow: number; count: number }) => {
       if (!spreadsheetRef) return { error: 'Spreadsheet not ready' };
       spreadsheetRef.insertRows(afterRow, count);
+      pushChange('insert_rows', `Insert ${count} rows after row ${afterRow}`, () => {
+        spreadsheetRef!.deleteRows(afterRow, count);
+      });
       return { success: true, insertedAt: afterRow, count };
     },
   },
 
   delete_rows: {
-    description: 'Delete rows from the spreadsheet. Use when the user asks to remove rows or clean up data.',
+    description: 'Delete rows.',
     parameters: z.object({
       startRow: z.number().describe('First row to delete (1-based)'),
-      count: z.number().describe('Number of rows to delete').default(1),
+      count: z.number().describe('Number of rows').default(1),
     }),
     handler: async ({ startRow, count }: { startRow: number; count: number }) => {
       if (!spreadsheetRef) return { error: 'Spreadsheet not ready' };
-      spreadsheetRef.deleteRows(startRow - 1, count);
+      const row0 = startRow - 1;
+      const maxCol = spreadsheetRef.getActiveSheetData().cols;
+      const prev = spreadsheetRef.getCellsInRange(row0, 0, row0 + count - 1, maxCol - 1);
+      spreadsheetRef.deleteRows(row0, count);
+      pushChange('delete_rows', `Delete ${count} rows from row ${startRow}`, () => {
+        spreadsheetRef!.insertRows(row0, count);
+        if (prev.length > 0) {
+          const restored = prev.map(r => r.map(v => (v ?? '') as string | number));
+          spreadsheetRef!.setRangeValues(row0, 0, restored);
+        }
+      });
       return { success: true, deletedFrom: startRow, count };
     },
   },
 
   insert_columns: {
-    description: 'Insert new empty columns. Use when the user asks to add columns.',
+    description: 'Insert empty columns.',
     parameters: z.object({
-      afterColumn: z.string().describe('Column letter after which to insert like "A", "B"'),
-      count: z.number().describe('Number of columns to insert').default(1),
+      afterColumn: z.string().describe('Column letter after which to insert like "A"'),
+      count: z.number().describe('Number of columns').default(1),
     }),
     handler: async ({ afterColumn, count }: { afterColumn: string; count: number }) => {
       if (!spreadsheetRef) return { error: 'Spreadsheet not ready' };
       const col = colIndex(afterColumn);
       spreadsheetRef.insertColumns(col + 1, count);
+      pushChange('insert_columns', `Insert ${count} columns after ${afterColumn}`, () => {
+        spreadsheetRef!.deleteColumns(col + 1, count);
+      });
       return { success: true, insertedAfter: afterColumn, count };
     },
   },
 
   delete_columns: {
-    description: 'Delete columns from the spreadsheet.',
+    description: 'Delete columns.',
     parameters: z.object({
-      startColumn: z.string().describe('First column to delete like "A", "B"'),
-      count: z.number().describe('Number of columns to delete').default(1),
+      startColumn: z.string().describe('First column letter like "A"'),
+      count: z.number().describe('Number of columns').default(1),
     }),
     handler: async ({ startColumn, count }: { startColumn: string; count: number }) => {
       if (!spreadsheetRef) return { error: 'Spreadsheet not ready' };
-      spreadsheetRef.deleteColumns(colIndex(startColumn), count);
+      const col0 = colIndex(startColumn);
+      const maxRow = spreadsheetRef.getActiveSheetData().rows;
+      const prev = spreadsheetRef.getCellsInRange(0, col0, maxRow - 1, col0 + count - 1);
+      spreadsheetRef.deleteColumns(col0, count);
+      pushChange('delete_columns', `Delete ${count} columns from ${startColumn}`, () => {
+        spreadsheetRef!.insertColumns(col0, count);
+        if (prev.length > 0) {
+          const restored = prev.map(r => r.map(v => (v ?? '') as string | number));
+          spreadsheetRef!.setRangeValues(0, col0, restored);
+        }
+      });
       return { success: true, deletedFrom: startColumn, count };
     },
   },
 
   format_cells: {
-    description: 'Format cells with styling like bold, colors, font size. Use when the user asks to make cells bold, change colors, format headers, etc.',
+    description: 'Apply styling (bold, colors, font) to a cell range.',
     parameters: z.object({
       startCell: z.string().describe('Top-left cell like "A1"'),
       endCell: z.string().describe('Bottom-right cell like "D1"'),
-      bold: z.boolean().optional().describe('Make text bold'),
-      italic: z.boolean().optional().describe('Make text italic'),
+      bold: z.boolean().optional().describe('Bold text'),
+      italic: z.boolean().optional().describe('Italic text'),
       fontSize: z.number().optional().describe('Font size in points'),
-      fontColor: z.string().optional().describe('Font color as hex like "#FF0000"'),
-      background: z.string().optional().describe('Background color as hex like "#FFFF00"'),
-      fontFamily: z.string().optional().describe('Font family like "Arial", "Inter"'),
+      fontColor: z.string().optional().describe('Hex color like "#FF0000"'),
+      background: z.string().optional().describe('Hex background like "#FFFF00"'),
+      fontFamily: z.string().optional().describe('Font name like "Arial"'),
     }),
     handler: async (params: {
       startCell: string; endCell: string;
@@ -197,16 +282,19 @@ export const spreadsheetActions = createActionRegistry({
         background: params.background,
         fontFamily: params.fontFamily,
       });
+      pushChange('format_cells', `Format ${params.startCell}:${params.endCell}`, () => {
+        // Formatting undo is limited — no-op for now
+      });
       return { success: true, range: `${params.startCell}:${params.endCell}` };
     },
   },
 
   set_number_format: {
-    description: 'Apply number formatting to cells like currency, percentage, date format. Use when user asks to format numbers as money, percentage, etc.',
+    description: 'Apply number format (currency, percentage, date) to a range.',
     parameters: z.object({
       startCell: z.string().describe('Top-left cell like "B2"'),
       endCell: z.string().describe('Bottom-right cell like "B100"'),
-      format: z.string().describe('Number format code like "$#,##0.00", "0.00%", "DD/MM/YYYY", "#,##0"'),
+      format: z.string().describe('Format code like "$#,##0.00", "0.00%", "#,##0"'),
     }),
     handler: async ({ startCell, endCell, format }: { startCell: string; endCell: string; format: string }) => {
       if (!spreadsheetRef) return { error: 'Spreadsheet not ready' };
@@ -218,12 +306,15 @@ export const spreadsheetActions = createActionRegistry({
       const endCol = colIndex(m2[1]!);
       const endRow = parseInt(m2[2]!, 10) - 1;
       spreadsheetRef.setNumberFormat(startRow, startCol, endRow, endCol, format);
+      pushChange('set_number_format', `Number format ${format} on ${startCell}:${endCell}`, () => {
+        // Number format undo is limited — no-op for now
+      });
       return { success: true, range: `${startCell}:${endCell}`, format };
     },
   },
 
   set_column_width: {
-    description: 'Set the width of a column. Use when user asks to resize or widen a column.',
+    description: 'Resize a column width.',
     parameters: z.object({
       column: z.string().describe('Column letter like "A"'),
       width: z.number().describe('Width in pixels'),
@@ -236,7 +327,7 @@ export const spreadsheetActions = createActionRegistry({
   },
 
   clear_range: {
-    description: 'Clear all content and formatting from a range. Use when user asks to clear, empty, or reset cells.',
+    description: 'Clear all content from a range.',
     parameters: z.object({
       startCell: z.string().describe('Top-left cell like "A1"'),
       endCell: z.string().describe('Bottom-right cell like "Z200"'),
@@ -250,13 +341,33 @@ export const spreadsheetActions = createActionRegistry({
       const startRow = parseInt(m1[2]!, 10) - 1;
       const endCol = colIndex(m2[1]!);
       const endRow = parseInt(m2[2]!, 10) - 1;
+
+      const prev = spreadsheetRef.getCellsInRange(startRow, startCol, endRow, endCol);
       spreadsheetRef.clearRange(startRow, startCol, endRow, endCol);
+      pushChange('clear_range', `Clear ${startCell}:${endCell}`, () => {
+        if (prev.length > 0) {
+          const restored = prev.map(r => r.map(v => (v ?? '') as string | number));
+          spreadsheetRef!.setRangeValues(startRow, startCol, restored);
+        }
+      });
+
       return { success: true, range: `${startCell}:${endCell}` };
     },
   },
 
+  undo_last_change: {
+    description: 'Undo the last spreadsheet modification. Call when the user asks to undo, revert, or go back.',
+    parameters: z.object({}),
+    handler: async () => {
+      const entry = popLastChange();
+      if (!entry) return { error: 'Nothing to undo' };
+      entry.undo();
+      return { success: true, undone: entry.description, remaining: getChangeHistoryLength() };
+    },
+  },
+
   get_current_time: {
-    description: 'Get the current date and time. Use when the user asks what time or date it is.',
+    description: 'Get current date and time.',
     parameters: z.object({
       timezone: z.string().optional().describe('IANA timezone like "America/New_York"'),
     }),

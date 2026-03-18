@@ -3,6 +3,7 @@ import { UniverSheetsCorePreset } from '@univerjs/preset-sheets-core';
 import { createUniver, LocaleType, mergeLocales } from '@univerjs/presets';
 import UniverPresetSheetsCoreEnUS from '@univerjs/preset-sheets-core/locales/en-US';
 import '@univerjs/preset-sheets-core/lib/index.css';
+import type { UniverWorkbookData, NumberFormatEntry } from '@/utils/xlsxImporter';
 
 type UniverAPI = ReturnType<typeof createUniver>['univerAPI'];
 
@@ -24,7 +25,11 @@ export interface SpreadsheetHandle {
   setNumberFormat: (startRow: number, startCol: number, endRow: number, endCol: number, format: string) => void;
   getActiveSheetData: () => { rows: number; cols: number; name: string };
   clearRange: (startRow: number, startCol: number, endRow: number, endCol: number) => void;
+  importWorkbook: (data: UniverWorkbookData, numberFormats?: NumberFormatEntry[]) => void;
 }
+
+const DEFAULT_ROW_COUNT = 1000;
+const DEFAULT_COL_COUNT = 26;
 
 export function useSpreadsheet(containerRef: React.RefObject<HTMLDivElement | null>): SpreadsheetHandle {
   const apiRef = useRef<UniverAPI | null>(null);
@@ -51,8 +56,8 @@ export function useSpreadsheet(containerRef: React.RefObject<HTMLDivElement | nu
         sheet1: {
           id: 'sheet1',
           name: 'Financial Data',
-          rowCount: 200,
-          columnCount: 26,
+          rowCount: DEFAULT_ROW_COUNT,
+          columnCount: DEFAULT_COL_COUNT,
         },
       },
     });
@@ -80,12 +85,7 @@ export function useSpreadsheet(containerRef: React.RefObject<HTMLDivElement | nu
     if (!api) return;
     const sheet = api.getActiveWorkbook()?.getActiveSheet();
     if (!sheet) return;
-    const range = sheet.getRange(row, col, 1, 1);
-    if (typeof value === 'string' && value.startsWith('=')) {
-      range?.setValue(value);
-    } else {
-      range?.setValue(value);
-    }
+    sheet.getRange(row, col, 1, 1)?.setValue(value);
   }, []);
 
   const setRangeValues = useCallback((startRow: number, startCol: number, values: (string | number)[][]) => {
@@ -118,7 +118,11 @@ export function useSpreadsheet(containerRef: React.RefObject<HTMLDivElement | nu
     const sheet = wb.getActiveSheet();
     if (!sheet) return 'No active sheet';
 
-    const name = sheet.getSheetName();
+    // List all sheets
+    const allSheets = wb.getSheets();
+    const sheetNames = allSheets.map(s => s.getSheetName());
+    const activeSheetName = sheet.getSheetName();
+
     const dataRange = sheet.getRange(0, 0, 50, 26);
     const values = dataRange?.getValues() as unknown[][] ?? [];
 
@@ -134,7 +138,7 @@ export function useSpreadsheet(containerRef: React.RefObject<HTMLDivElement | nu
       }
     }
 
-    if (usedRows === 0) return `Sheet "${name}" is empty.`;
+    if (usedRows === 0) return `Sheet "${activeSheetName}" is empty. Sheets: [${sheetNames.join(', ')}]`;
 
     const colLetters = (c: number) => String.fromCharCode(65 + c);
     const preview: string[] = [];
@@ -151,7 +155,8 @@ export function useSpreadsheet(containerRef: React.RefObject<HTMLDivElement | nu
     }
 
     const colHeaders = Array.from({ length: maxPreviewCols }, (_, i) => colLetters(i)).join(' | ');
-    let summary = `Sheet "${name}" — ${usedRows} rows × ${usedCols} cols (${colLetters(0)} to ${colLetters(usedCols - 1)})\n`;
+    let summary = `Sheets: [${sheetNames.join(', ')}] — Active: "${activeSheetName}"\n`;
+    summary += `${usedRows} rows × ${usedCols} cols (${colLetters(0)} to ${colLetters(usedCols - 1)})\n`;
     summary += `Columns: ${colHeaders}\n`;
     summary += preview.join('\n');
 
@@ -236,8 +241,8 @@ export function useSpreadsheet(containerRef: React.RefObject<HTMLDivElement | nu
     const sheet = api.getActiveWorkbook()?.getActiveSheet();
     if (!sheet) return { rows: 0, cols: 0, name: '' };
     return {
-      rows: 200,
-      cols: 26,
+      rows: DEFAULT_ROW_COUNT,
+      cols: DEFAULT_COL_COUNT,
       name: sheet.getSheetName(),
     };
   }, []);
@@ -249,6 +254,44 @@ export function useSpreadsheet(containerRef: React.RefObject<HTMLDivElement | nu
     if (!sheet) return;
     const range = sheet.getRange(startRow, startCol, endRow - startRow + 1, endCol - startCol + 1);
     range?.clear();
+  }, []);
+
+  const importWorkbook = useCallback((data: UniverWorkbookData, numberFormats?: NumberFormatEntry[]) => {
+    const api = apiRef.current;
+    if (!api) return;
+
+    // Dispose current workbook
+    const currentWb = api.getActiveWorkbook();
+    if (currentWb) {
+      const unitId = currentWb.getId();
+      api.disposeUnit(unitId);
+    }
+
+    // Create new workbook with imported data (includes cell styles, merges, dimensions)
+    api.createWorkbook(data as unknown as Record<string, unknown>);
+
+    // Apply number formats via Facade API (Univer stores numfmt separately from cell styles)
+    if (numberFormats && numberFormats.length > 0) {
+      const wb = api.getActiveWorkbook();
+      if (wb) {
+        const sheets = wb.getSheets();
+        const sheetMap = new Map<string, typeof sheets[number]>();
+        for (const s of sheets) {
+          sheetMap.set(s.getSheetId(), s);
+        }
+
+        for (const nf of numberFormats) {
+          const sheet = sheetMap.get(nf.sheetId);
+          if (sheet) {
+            try {
+              sheet.getRange(nf.row, nf.col, 1, 1)?.setNumberFormat(nf.format);
+            } catch {
+              // Skip invalid number format entries
+            }
+          }
+        }
+      }
+    }
   }, []);
 
   return {
@@ -269,5 +312,6 @@ export function useSpreadsheet(containerRef: React.RefObject<HTMLDivElement | nu
     setNumberFormat,
     getActiveSheetData,
     clearRange,
+    importWorkbook,
   };
 }
