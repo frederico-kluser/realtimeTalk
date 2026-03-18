@@ -29,6 +29,8 @@ export interface SpreadsheetHandle {
 export function useSpreadsheet(containerRef: React.RefObject<HTMLDivElement | null>): SpreadsheetHandle {
   const apiRef = useRef<UniverAPI | null>(null);
   const [isReady, setIsReady] = useState(false);
+  const rowCountRef = useRef(200);
+  const colCountRef = useRef(26);
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -88,6 +90,24 @@ export function useSpreadsheet(containerRef: React.RefObject<HTMLDivElement | nu
     }
   }, []);
 
+  const ensureSheetSize = useCallback((neededRows: number, neededCols: number) => {
+    const api = apiRef.current;
+    if (!api) return;
+    const sheet = api.getActiveWorkbook()?.getActiveSheet();
+    if (!sheet) return;
+
+    if (neededRows > rowCountRef.current) {
+      const toAdd = neededRows - rowCountRef.current;
+      sheet.insertRows(rowCountRef.current, toAdd);
+      rowCountRef.current = neededRows;
+    }
+    if (neededCols > colCountRef.current) {
+      const toAdd = neededCols - colCountRef.current;
+      sheet.insertColumns(colCountRef.current, toAdd);
+      colCountRef.current = neededCols;
+    }
+  }, []);
+
   const setRangeValues = useCallback((startRow: number, startCol: number, values: (string | number)[][]) => {
     const api = apiRef.current;
     if (!api) return;
@@ -95,9 +115,12 @@ export function useSpreadsheet(containerRef: React.RefObject<HTMLDivElement | nu
     if (!sheet) return;
     const numRows = values.length;
     const numCols = Math.max(...values.map(r => r.length));
+
+    ensureSheetSize(startRow + numRows, startCol + numCols);
+
     const range = sheet.getRange(startRow, startCol, numRows, numCols);
     range?.setValues(values);
-  }, []);
+  }, [ensureSheetSize]);
 
   const getCellsInRange = useCallback((startRow: number, startCol: number, endRow: number, endCol: number): unknown[][] => {
     const api = apiRef.current;
@@ -236,8 +259,8 @@ export function useSpreadsheet(containerRef: React.RefObject<HTMLDivElement | nu
     const sheet = api.getActiveWorkbook()?.getActiveSheet();
     if (!sheet) return { rows: 0, cols: 0, name: '' };
     return {
-      rows: 200,
-      cols: 26,
+      rows: rowCountRef.current,
+      cols: colCountRef.current,
       name: sheet.getSheetName(),
     };
   }, []);
