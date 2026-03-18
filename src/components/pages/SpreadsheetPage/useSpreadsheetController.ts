@@ -184,18 +184,18 @@ export function useSpreadsheetController() {
     const file = e.target.files?.[0];
     if (!file || !spreadsheetHandleRef.current) return;
 
-    const { read, utils } = await import('xlsx');
+    const ExcelJS = await import('exceljs');
+    const { convertExcelJSToUniver } = await import('@/utils/xlsxImporter');
+
+    const workbook = new ExcelJS.Workbook();
     const buffer = await file.arrayBuffer();
-    const workbook = read(buffer);
-    const sheetName = workbook.SheetNames[0];
-    if (!sheetName) return;
+    await workbook.xlsx.load(buffer);
 
-    const worksheet = workbook.Sheets[sheetName]!;
-    const jsonData = utils.sheet_to_json<(string | number)[]>(worksheet, { header: 1 });
+    const { workbookData, numberFormats } = convertExcelJSToUniver(
+      workbook as unknown as Parameters<typeof convertExcelJSToUniver>[0]
+    );
 
-    if (jsonData.length > 0) {
-      spreadsheetHandleRef.current.setRangeValues(0, 0, jsonData);
-    }
+    spreadsheetHandleRef.current.importWorkbook(workbookData, numberFormats);
 
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
