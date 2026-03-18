@@ -98,12 +98,13 @@ export function useSpreadsheet(containerRef: React.RefObject<HTMLDivElement | nu
 
     if (neededRows > rowCountRef.current) {
       const toAdd = neededRows - rowCountRef.current;
-      sheet.insertRows(rowCountRef.current, toAdd);
+      // Anchor must be within current bounds — insert before the last row
+      sheet.insertRows(rowCountRef.current - 1, toAdd);
       rowCountRef.current = neededRows;
     }
     if (neededCols > colCountRef.current) {
       const toAdd = neededCols - colCountRef.current;
-      sheet.insertColumns(colCountRef.current, toAdd);
+      sheet.insertColumns(colCountRef.current - 1, toAdd);
       colCountRef.current = neededCols;
     }
   }, []);
