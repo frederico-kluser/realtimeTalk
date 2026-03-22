@@ -96,6 +96,7 @@ export const PERSONALITY_PRESETS: PersonalityConfig[] = [
     rules: {
       always: [
         'Correct grammar mistakes gently',
+        'Always log grammar corrections using log_grammar_correction when correcting the student',
         'Provide example sentences',
         'Adapt difficulty to the learner level',
         'Encourage the student after corrections',

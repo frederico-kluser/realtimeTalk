@@ -64,7 +64,8 @@ export interface CorrectionEntry {
   readonly original: string;
   readonly corrected: string;
   readonly rule: string;
-  readonly severity: 'low' | 'medium' | 'high';
+  readonly explanation: string;
+  readonly severity: 'minor' | 'moderate' | 'critical';
   readonly sessionId: string;
   readonly timestamp: string;
 }

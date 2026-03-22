@@ -1,5 +1,8 @@
 import { z } from 'zod';
 import { createActionRegistry } from './registry';
+import { sessionContext } from './sessionContext';
+import { getDB } from '@/storage/idb';
+import type { CorrectionEntry, TutorReport } from '@/storage/idb';
 
 export const appActions = createActionRegistry({
   search_web: {
@@ -52,6 +55,113 @@ export const appActions = createActionRegistry({
     handler: async ({ event }: { event: string }) => {
       console.log('[analytics]', event);
       return { logged: true };
+    },
+  },
+
+  log_grammar_correction: {
+    description: 'Silently log a grammar correction when correcting the student. Always use this action whenever you correct a grammar mistake during conversation.',
+    type: 'background' as const,
+    parameters: z.object({
+      original: z.string().describe('The original incorrect text from the student'),
+      corrected: z.string().describe('The corrected version of the text'),
+      rule: z.string().describe('The grammar rule that was violated (e.g. "irregular past tense", "subject-verb agreement")'),
+      explanation: z.string().describe('Brief explanation of why this is incorrect'),
+      severity: z.enum(['minor', 'moderate', 'critical']).describe('How significant the error is'),
+    }),
+    handler: async (params: {
+      original: string;
+      corrected: string;
+      rule: string;
+      explanation: string;
+      severity: 'minor' | 'moderate' | 'critical';
+    }) => {
+      const sessionId = sessionContext.getSessionId();
+      if (!sessionId) return { logged: false, reason: 'no active session' };
+
+      const entry: CorrectionEntry = {
+        id: crypto.randomUUID(),
+        original: params.original,
+        corrected: params.corrected,
+        rule: params.rule,
+        explanation: params.explanation,
+        severity: params.severity,
+        sessionId,
+        timestamp: new Date().toISOString(),
+      };
+
+      const db = await getDB();
+      await db.put('corrections', entry);
+      return { logged: true, id: entry.id };
+    },
+  },
+
+  get_session_corrections: {
+    description: 'Get all grammar corrections from the current session grouped by rule. Use when the student asks about their mistakes (e.g. "what mistakes did I make?", "show my errors").',
+    parameters: z.object({}),
+    handler: async () => {
+      const sessionId = sessionContext.getSessionId();
+      if (!sessionId) return { corrections: [], message: 'No active session' };
+
+      const db = await getDB();
+      const all = await db.getAllFromIndex('corrections', 'by-session', sessionId);
+
+      const grouped: Record<string, Array<{ original: string; corrected: string; explanation: string; severity: string }>> = {};
+      for (const c of all) {
+        const group = grouped[c.rule] ?? [];
+        group.push({
+          original: c.original,
+          corrected: c.corrected,
+          explanation: c.explanation,
+          severity: c.severity,
+        });
+        grouped[c.rule] = group;
+      }
+
+      return {
+        totalCorrections: all.length,
+        byRule: grouped,
+        sessionId,
+      };
+    },
+  },
+
+  generate_session_report: {
+    description: 'Generate a session report summarizing the student performance including corrections, vocabulary used, and fluency notes. Use at the end of a tutoring session or when the student asks for a report.',
+    parameters: z.object({
+      corrections: z.array(z.object({
+        original: z.string(),
+        corrected: z.string(),
+        rule: z.string(),
+      })).describe('List of grammar corrections made during the session'),
+      vocabulary_used: z.array(z.string()).describe('New or notable vocabulary words used by the student'),
+      fluency_notes: z.string().describe('Overall notes on fluency, pronunciation, and communication effectiveness'),
+    }),
+    handler: async (params: {
+      corrections: Array<{ original: string; corrected: string; rule: string }>;
+      vocabulary_used: string[];
+      fluency_notes: string;
+    }) => {
+      const sessionId = sessionContext.getSessionId();
+      if (!sessionId) return { saved: false, reason: 'no active session' };
+
+      const report: TutorReport = {
+        summary: params.fluency_notes,
+        correctionsCount: params.corrections.length,
+        newVocabulary: params.vocabulary_used,
+      };
+
+      sessionContext.setTutorReport(report);
+
+      return {
+        saved: true,
+        report: {
+          summary: report.summary,
+          correctionsCount: report.correctionsCount,
+          vocabularyCount: report.newVocabulary.length,
+          corrections: params.corrections,
+          vocabulary: params.vocabulary_used,
+        },
+      };
     },
   },
 });

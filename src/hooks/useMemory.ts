@@ -48,7 +48,7 @@ export function useMemory() {
           messages: [
             {
               role: 'system',
-              content: 'Extract 3-5 specific facts about the user from this conversation that would be useful to remember in future conversations. Return a JSON object with a "facts" key containing an array of strings. Each fact should be a complete sentence starting with "The user". Return only the JSON object.',
+              content: 'Extract 3-5 specific facts about the user from this conversation that would be useful to remember in future conversations. Include grammar error patterns if this is a language learning session (e.g. "The user struggles with irregular past tense verbs", "The user frequently confuses subject-verb agreement"). Return a JSON object with a "facts" key containing an array of strings. Each fact should be a complete sentence starting with "The user". Return only the JSON object.',
             },
             { role: 'user', content: transcript },
           ],

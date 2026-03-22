@@ -19,6 +19,7 @@ import type { TranscriptEntry, SessionRecord } from '@/storage/idb';
 import { getDB } from '@/storage/idb';
 import { estimateCost } from '@/utils/costEstimator';
 import { apiKeyManager } from '@/storage/keyManager';
+import { sessionContext } from '@/actions/sessionContext';
 
 export function useConversationController() {
   const [model, setModel] = useState<RealtimeModel>('gpt-realtime-mini');
@@ -172,6 +173,7 @@ export function useConversationController() {
     setPendingContext(context);
     sessionStartRef.current = new Date().toISOString();
     sessionIdRef.current = crypto.randomUUID();
+    sessionContext.setSessionId(sessionIdRef.current);
     setTranscript([]);
     setTotalCost(0);
     setTotalTokens(0);
@@ -207,6 +209,7 @@ export function useConversationController() {
 
     sessionStartRef.current = new Date().toISOString();
     sessionIdRef.current = crypto.randomUUID();
+    sessionContext.setSessionId(sessionIdRef.current);
     setTotalCost(0);
     setTotalTokens(0);
     await session.connect();
@@ -227,6 +230,7 @@ export function useConversationController() {
     session.disconnect();
 
     if (transcript.length > 0) {
+      const pendingReport = sessionContext.getTutorReport();
       const record: SessionRecord = {
         id: sessionIdRef.current,
         startedAt: sessionStartRef.current,
@@ -238,6 +242,7 @@ export function useConversationController() {
         transcript,
         actionsTriggered: actionHandlers.actionLog.map((a) => a.name),
         personalityId: selectedPersonality.id,
+        ...(pendingReport ? { tutorReport: pendingReport } : {}),
       };
 
       try {
@@ -250,6 +255,8 @@ export function useConversationController() {
       const fullTranscript = transcript.map((t) => `${t.role}: ${t.text}`).join('\n');
       void memory.extractAndSaveFacts(sessionIdRef.current, fullTranscript);
     }
+
+    sessionContext.clear();
   }, [
     session,
     transcript,
