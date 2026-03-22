@@ -7,6 +7,7 @@ import { getRandomWords } from './data/vocabularyBank';
 import type { VocabTopic, VocabDifficulty } from './data/vocabularyBank';
 import { getRandomQuestions } from './data/grammarQuiz';
 import type { QuizTopic, QuizDifficulty } from './data/grammarQuiz';
+import { getDebateTopics, findDebateTopic, getRandomDebateTopic } from './data/debateTopics';
 import { sessionContext } from './sessionContext';
 import { similarityScore, findDifferences } from '@/utils/textSimilarity';
 
@@ -732,6 +733,72 @@ export const appActions = createActionRegistry({
       await db.put('vocabulary', entry);
 
       return { logged: true, id: entry.id, word, correct };
+    },
+  },
+
+  start_debate: {
+    description: 'Start a structured debate exercise. Sofia picks a side and the student argues the opposite. Excellent for practicing opinion expressions, connectors, and argumentation. Use when the student wants to practice debating, expressing opinions, or when you want to challenge intermediate/advanced students. At the end of the debate (after 4-6 exchanges), provide feedback on argumentation vocabulary, connector usage, and argument structure.',
+    parameters: z.object({
+      topic: z.string().describe('Debate topic — can be a keyword like "remote work" or "AI". If empty or not found, a random topic is chosen.'),
+      user_side: z.enum(['for', 'against']).describe('Which side the student will argue'),
+    }),
+    handler: async ({ topic, user_side }: {
+      topic: string;
+      user_side: 'for' | 'against';
+    }) => {
+      // Try to find the requested topic, fall back to random
+      const found = topic.trim()
+        ? findDebateTopic(topic)
+        : undefined;
+
+      const debateTopic = found ?? getRandomDebateTopic();
+      const sofiaSide = user_side === 'for' ? 'against' : 'for';
+
+      // Pick expressions for each side
+      const studentExpressions = user_side === 'for'
+        ? debateTopic.expressions_for
+        : debateTopic.expressions_against;
+
+      const sofiaExpressions = sofiaSide === 'for'
+        ? debateTopic.expressions_for
+        : debateTopic.expressions_against;
+
+      // List all available topics for reference
+      const allTopics = getDebateTopics().map(t => ({
+        topic: t.topic,
+        difficulty: t.difficulty_level,
+      }));
+
+      return {
+        debate: {
+          topic: debateTopic.topic,
+          description: debateTopic.description,
+          difficulty: debateTopic.difficulty_level,
+          student_side: user_side,
+          sofia_side: sofiaSide,
+        },
+        target_expressions: {
+          student_should_use: studentExpressions,
+          sofia_will_model: sofiaExpressions,
+          useful_connectors: debateTopic.useful_connectors,
+        },
+        available_topics: allTopics,
+        instructions: [
+          `You are now in DEBATE MODE on the topic: "${debateTopic.topic}".`,
+          `You (Sofia) argue ${sofiaSide.toUpperCase()} this topic. The student argues ${user_side.toUpperCase()}.`,
+          `Open by stating your position clearly using expressions from your side.`,
+          `Model good argumentation: use connectors (${debateTopic.useful_connectors.slice(0, 4).join(', ')}), structured arguments, and polite disagreement.`,
+          `Encourage the student to use the target expressions listed in student_should_use.`,
+          `If the student struggles, subtly prompt them: "You could say something like '${studentExpressions[0]}'"`,
+          `After 4-6 exchanges, wrap up the debate and provide structured feedback:`,
+          `  1. Which target expressions the student used (and which they missed)`,
+          `  2. How well they used connectors to link their arguments`,
+          `  3. The clarity and structure of their arguments`,
+          `  4. Suggestions for improvement with specific examples`,
+          `Remember: the focus is on LANGUAGE PRACTICE, not on who "wins" the debate.`,
+          `Keep the tone friendly, encouraging, and educational throughout.`,
+        ],
+      };
     },
   },
 });
