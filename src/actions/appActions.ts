@@ -1,7 +1,8 @@
 import { z } from 'zod';
 import { createActionRegistry } from './registry';
 import { getDB } from '@/storage/idb';
-import type { CorrectionEntry, TutorReport, VocabularyEntry } from '@/storage/idb';
+import type { CorrectionEntry, Flashcard, TutorReport, VocabularyEntry } from '@/storage/idb';
+import { calculateNextReview } from '@/utils/srs';
 import { EXPRESSIONS } from './data/expressions';
 import { getRandomWords } from './data/vocabularyBank';
 import type { VocabTopic, VocabDifficulty } from './data/vocabularyBank';
@@ -1024,6 +1025,137 @@ export const appActions = createActionRegistry({
       const updated = [...existing, entry].slice(-200);
       localStorage.setItem(key, JSON.stringify(updated));
       return { logged: true, metric_type, value };
+    },
+  },
+
+  flashcard_session: {
+    description: 'Start a flashcard review session using spaced repetition. Fetches cards due for review (next_review <= now) from IndexedDB. Sofia presents each card by voice and the student answers. After each answer, call update_flashcard. Use when the student says "review my flashcards", "let\'s review", "flashcard session", or similar.',
+    parameters: z.object({
+      max_cards: z.number().min(5).max(30).default(10).describe('Maximum number of cards to review (default 10)'),
+      focus_area: z.enum(['vocabulary', 'phrases', 'idioms', 'all']).default('all').describe('Focus area for the review session'),
+    }),
+    handler: async ({ max_cards, focus_area }: { max_cards: number; focus_area: 'vocabulary' | 'phrases' | 'idioms' | 'all' }) => {
+      const db = await getDB();
+      const now = new Date().toISOString();
+      const allCards = await db.getAll('flashcards');
+
+      const dueCards = allCards
+        .filter((c) => c.nextReview <= now)
+        .sort((a, b) => a.nextReview.localeCompare(b.nextReview))
+        .slice(0, max_cards);
+
+      if (dueCards.length === 0) {
+        const nextCard = allCards
+          .filter((c) => c.nextReview > now)
+          .sort((a, b) => a.nextReview.localeCompare(b.nextReview))[0];
+
+        return {
+          cards: [],
+          totalDue: 0,
+          totalCards: allCards.length,
+          message: nextCard
+            ? `No cards due for review right now. Next review scheduled for ${new Date(nextCard.nextReview).toLocaleDateString()}.`
+            : 'No flashcards yet. Cards are created automatically when you learn new vocabulary during our conversations.',
+        };
+      }
+
+      return {
+        cards: dueCards.map((c) => ({
+          word: c.word,
+          translation: c.translation,
+          context: c.context,
+          interval: c.interval,
+        })),
+        totalDue: dueCards.length,
+        totalCards: allCards.length,
+        focus_area,
+        instructions: [
+          'Present each flashcard one at a time by voice.',
+          'Say the word in the target language and ask the student to provide the translation or use it in a sentence.',
+          'After the student responds, call update_flashcard with the word and whether the answer was correct.',
+          'Give brief feedback: confirm correct answers, gently provide the translation for wrong ones with the context sentence.',
+          'At the end, summarize the results: total correct, total wrong, and encouragement.',
+        ],
+      };
+    },
+  },
+
+  update_flashcard: {
+    description: 'Update a flashcard after the student reviews it. Recalculates the next review interval using the SM-2 spaced repetition algorithm. Called after each flashcard answer during a flashcard_session.',
+    type: 'background' as const,
+    parameters: z.object({
+      word: z.string().describe('The flashcard word that was reviewed'),
+      correct: z.boolean().describe('Whether the student answered correctly'),
+    }),
+    handler: async ({ word, correct }: { word: string; correct: boolean }) => {
+      const db = await getDB();
+      const allCards = await db.getAll('flashcards');
+      const card = allCards.find((c) => c.word === word);
+
+      if (!card) return { updated: false, reason: `Flashcard not found: ${word}` };
+
+      const { nextInterval, nextEaseFactor, nextReviewDate } = calculateNextReview(
+        correct,
+        card.interval,
+        card.easeFactor,
+      );
+
+      const updated: Flashcard = {
+        ...card,
+        interval: nextInterval,
+        easeFactor: nextEaseFactor,
+        nextReview: nextReviewDate,
+      };
+
+      await db.put('flashcards', updated);
+
+      return {
+        updated: true,
+        word,
+        correct,
+        nextInterval,
+        nextReviewDate: new Date(nextReviewDate).toLocaleDateString(),
+      };
+    },
+  },
+
+  add_flashcard: {
+    description: 'Add a new flashcard for spaced repetition review. Call this automatically whenever you teach the student a new word, phrase, or idiom during conversation. The card will appear in future flashcard review sessions.',
+    type: 'background' as const,
+    parameters: z.object({
+      word: z.string().describe('The word or phrase in the target language'),
+      translation: z.string().describe('Translation in the student native language'),
+      context_sentence: z.string().describe('An example sentence using the word'),
+      difficulty: z.enum(['easy', 'medium', 'hard']).describe('Estimated difficulty for the student'),
+    }),
+    handler: async ({ word, translation, context_sentence, difficulty }: {
+      word: string;
+      translation: string;
+      context_sentence: string;
+      difficulty: 'easy' | 'medium' | 'hard';
+    }) => {
+      const db = await getDB();
+      const allCards = await db.getAll('flashcards');
+      const existing = allCards.find((c) => c.word.toLowerCase() === word.toLowerCase());
+
+      if (existing) return { added: false, reason: `Flashcard already exists for "${word}"` };
+
+      const initialEase = difficulty === 'easy' ? 2.8 : difficulty === 'medium' ? 2.5 : 2.2;
+
+      const card: Flashcard = {
+        id: crypto.randomUUID(),
+        word,
+        translation,
+        context: context_sentence,
+        nextReview: new Date().toISOString(),
+        interval: 0,
+        easeFactor: initialEase,
+        createdAt: new Date().toISOString(),
+      };
+
+      await db.put('flashcards', card);
+
+      return { added: true, id: card.id, word, nextReview: 'now' };
     },
   },
 
