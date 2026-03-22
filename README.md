@@ -285,8 +285,8 @@ Translation files are located in `src/i18n/`:
 
 RealtimeTalk supports custom TypeScript actions that the AI can trigger during voice conversations. See the full guide:
 
-- **English**: [ACTION_TRIGGERS.md](./ACTION_TRIGGERS.md)
-- **Português**: [ACTION_TRIGGERS_PT.md](./ACTION_TRIGGERS_PT.md)
+- **English**: [ACTION_TRIGGERS.md](./docs/ACTION_TRIGGERS.md)
+- **Português**: [ACTION_TRIGGERS_PT.md](./docs/ACTION_TRIGGERS_PT.md)
 
 ---
 
