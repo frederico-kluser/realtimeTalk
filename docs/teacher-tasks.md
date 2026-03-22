@@ -16,10 +16,10 @@ Cada tarefa e autocontida — pode ser executada por um agente fresh sem context
 | 2.2 | Questionario Multipla Escolha | DONE |
 | 2.3 | Text Similarity + Pronuncia | DONE |
 | 2.4 | Ditado (Dictation Mode) | DONE |
-| 3.1 | Role-Play Situacional | TODO |
-| 3.2 | Modo Correcao Adiada | TODO |
-| 3.3 | Modo Imersao | TODO |
-| 3.4 | Modo Debate / Discussao | TODO |
+| 3.1 | Role-Play Situacional | DONE |
+| 3.2 | Modo Correcao Adiada | DONE |
+| 3.3 | Modo Imersao | DONE |
+| 3.4 | Modo Debate / Discussao | DONE |
 | 4.1 | Progresso Adaptativo | TODO |
 | 4.2 | Flashcards SRS | TODO |
 | 4.3 | Gamificacao | TODO |
@@ -432,7 +432,7 @@ Cada tarefa e autocontida — pode ser executada por um agente fresh sem context
 
 ## Fase 3 — Experiencias Ricas
 
-### Task 3.1: Role-Play Situacional
+### Task 3.1: Role-Play Situacional — DONE
 
 ```xml
 <task_prompt>
@@ -477,9 +477,11 @@ Cada tarefa e autocontida — pode ser executada por um agente fresh sem context
 </task_prompt>
 ```
 
+**Resultado:** Actions `start_roleplay` (conversational) e `end_roleplay` (conversational) criadas em `src/actions/appActions.ts`. Banco de 8 cenarios em `src/personality/scenarios.ts` (restaurant, airport, hotel, job_interview, doctor_visit, shopping, phone_call, meeting) com vocabulario-alvo por nivel e frases-chave. Estado de roleplay gerenciado via `sessionContext`. Scorecard gerado ao final com rating, vocabulario usado e recomendacao. Regras adicionadas ao preset. Typecheck passa.
+
 ---
 
-### Task 3.2: Modo Correcao Adiada (Fluency First)
+### Task 3.2: Modo Correcao Adiada (Fluency First) — DONE
 
 ```xml
 <task_prompt>
@@ -523,9 +525,11 @@ Cada tarefa e autocontida — pode ser executada por um agente fresh sem context
 </task_prompt>
 ```
 
+**Resultado:** Action `toggle_correction_mode` (conversational) criada em `src/actions/appActions.ts`. Alterna entre modo immediate e deferred via `sessionContext.setCorrectionMode()`. No modo deferred, envia `session.update` com instrucoes adicionais para nao corrigir inline e apenas logar erros via `log_grammar_correction`. Funcoes `setSendEvent`, `setPersonalityPrompt` e `setCorrectionMode` adicionadas ao `sessionContext.ts`. Integrado com `useConversationController.ts` e `usePersonality.ts`. Regra adicionada ao preset. Typecheck passa.
+
 ---
 
-### Task 3.3: Modo Imersao
+### Task 3.3: Modo Imersao — DONE
 
 ```xml
 <task_prompt>
@@ -569,9 +573,11 @@ Cada tarefa e autocontida — pode ser executada por um agente fresh sem context
 </task_prompt>
 ```
 
+**Resultado:** Actions `toggle_immersion_mode` (conversational), `log_fluency_metric` (background) e `log_vocabulary_usage` (background) criadas em `src/actions/appActions.ts`. Immersion mode salva/remove estado em localStorage. Handler retorna instrucoes de imersao para injecao via session.update. Metricas de fluencia e vocabulario coletadas silenciosamente com limite de 200/500 entradas. Integrado com `useConversationController.ts` e `useActionRegistry.ts`. Regras adicionadas ao preset. Typecheck passa.
+
 ---
 
-### Task 3.4: Modo Debate / Discussao
+### Task 3.4: Modo Debate / Discussao — DONE
 
 ```xml
 <task_prompt>
@@ -613,6 +619,8 @@ Cada tarefa e autocontida — pode ser executada por um agente fresh sem context
   </validation>
 </task_prompt>
 ```
+
+**Resultado:** Action `start_debate` (conversational) criada em `src/actions/appActions.ts`. Banco de 15+ temas de debate em `src/actions/data/debateTopics.ts` com expressoes pro/contra, conectivos uteis e nivel de dificuldade. Handler faz busca fuzzy por topico, fallback para aleatorio, e atribui lados (student vs Sofia). Retorna expressoes-alvo para ambos os lados e instrucoes detalhadas para conduzir debate de 4-6 trocas com feedback final. Typecheck passa.
 
 ---
 
