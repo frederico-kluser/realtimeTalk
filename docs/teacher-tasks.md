@@ -13,9 +13,9 @@ Cada tarefa e autocontida — pode ser executada por um agente fresh sem context
 | 1.3 | Correcao Gramatical com Log | DONE |
 | 1.4 | Palavra do Dia + Expressoes | DONE |
 | 2.1 | Quiz de Vocabulario por Voz | DONE |
-| 2.2 | Questionario Multipla Escolha | TODO |
+| 2.2 | Questionario Multipla Escolha | DONE |
 | 2.3 | Text Similarity + Pronuncia | DONE |
-| 2.4 | Ditado (Dictation Mode) | TODO |
+| 2.4 | Ditado (Dictation Mode) | DONE |
 | 3.1 | Role-Play Situacional | TODO |
 | 3.2 | Modo Correcao Adiada | TODO |
 | 3.3 | Modo Imersao | TODO |
@@ -291,7 +291,7 @@ Cada tarefa e autocontida — pode ser executada por um agente fresh sem context
 
 ---
 
-### Task 2.2: Questionario de Multipla Escolha
+### Task 2.2: Questionario de Multipla Escolha — DONE
 
 ```xml
 <task_prompt>
@@ -331,6 +331,8 @@ Cada tarefa e autocontida — pode ser executada por um agente fresh sem context
   </validation>
 </task_prompt>
 ```
+
+**Resultado:** Action `start_multiple_choice_quiz` (conversational) criada em `src/actions/appActions.ts`. Banco de questoes em `src/actions/data/grammarQuiz.ts` com 50+ questoes cobrindo grammar, vocabulary, idioms, prepositions e tenses por 3 niveis. Handler seleciona questoes aleatorias e retorna com opcoes A/B/C/D, letra correta e explicacao. Reutiliza `log_quiz_result` para tracking. Typecheck passa.
 
 ---
 
@@ -382,7 +384,7 @@ Cada tarefa e autocontida — pode ser executada por um agente fresh sem context
 
 ---
 
-### Task 2.4: Ditado (Dictation Mode)
+### Task 2.4: Ditado (Dictation Mode) — DONE
 
 ```xml
 <task_prompt>
@@ -423,6 +425,8 @@ Cada tarefa e autocontida — pode ser executada por um agente fresh sem context
   </validation>
 </task_prompt>
 ```
+
+**Resultado:** Actions `start_dictation` (conversational) e `check_dictation` (conversational) criadas em `src/actions/appActions.ts`. Banco de 30 frases por nivel (beginner/intermediate/advanced) embutido no handler. `check_dictation` reutiliza `similarityScore` e `findDifferences` de `src/utils/textSimilarity.ts`. Retorna score, rating (perfect/excellent/good/fair/needs_practice), palavras perdidas e feedback contextual. Typecheck passa.
 
 ---
 
