@@ -8,6 +8,33 @@ export function useMemory() {
   ) => {
     const db = await getDB();
     const memories = await db.getAll('memories');
+
+    // Inject student profile if available
+    const profile = await db.get('student_profile', 'current');
+    if (profile) {
+      const corrections = await db.getAll('corrections');
+      const ruleCounts: Record<string, number> = {};
+      for (const c of corrections) {
+        ruleCounts[c.rule] = (ruleCounts[c.rule] ?? 0) + 1;
+      }
+      const focusAreas = Object.entries(ruleCounts)
+        .sort(([, a], [, b]) => b - a)
+        .slice(0, 3)
+        .map(([rule]) => rule);
+
+      const focusText = focusAreas.length > 0 ? focusAreas.join(', ') : 'general practice';
+      const profileInjection = `\n\n# STUDENT PROFILE\nCurrent learner level: ${profile.level}. Focus areas: ${focusText}. Known vocabulary: ${profile.knownWords} words. Average score: ${profile.avgScore}.\n\nAdapt difficulty, vocabulary, and exercises to match this level.`;
+
+      sendEvent({
+        type: 'conversation.item.create',
+        item: {
+          type: 'message',
+          role: 'system',
+          content: [{ type: 'input_text', text: profileInjection }],
+        },
+      });
+    }
+
     if (memories.length === 0) return;
 
     const recent = memories

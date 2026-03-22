@@ -14,6 +14,17 @@ import { similarityScore, findDifferences } from '@/utils/textSimilarity';
 import { getScenario, buildRoleplayInstructions } from '@/personality/scenarios';
 import type { ScenarioId, ScenarioDifficulty } from '@/personality/scenarios';
 
+type CEFRLevel = 'A1' | 'A2' | 'B1' | 'B2' | 'C1' | 'C2';
+
+function estimateLevelFromScore(avgScore: number): CEFRLevel {
+  if (avgScore >= 90) return 'C2';
+  if (avgScore >= 80) return 'C1';
+  if (avgScore >= 65) return 'B2';
+  if (avgScore >= 50) return 'B1';
+  if (avgScore >= 35) return 'A2';
+  return 'A1';
+}
+
 const DEFERRED_CORRECTION_ADDENDUM = `
 
 # DEFERRED CORRECTION MODE (ACTIVE)
@@ -1032,6 +1043,137 @@ export const appActions = createActionRegistry({
       const updated = [...existing, entry].slice(-500);
       localStorage.setItem(key, JSON.stringify(updated));
       return { logged: true, wordsCount: words.length, is_new };
+    },
+  },
+
+  update_student_profile: {
+    description: 'Silently update the student progress profile with metrics from the current session. Call this at the end of each session or after exercises to track vocabulary, errors, scores, and topics.',
+    type: 'background' as const,
+    parameters: z.object({
+      vocabulary_used: z.array(z.string()).optional().describe('New vocabulary words used in this session'),
+      grammar_errors: z.number().optional().describe('Number of grammar errors in this session'),
+      exercise_score: z.number().min(0).max(100).optional().describe('Score from an exercise (0-100)'),
+      topics_practiced: z.array(z.string()).optional().describe('Topics covered in this session'),
+    }),
+    handler: async (params: {
+      vocabulary_used?: string[];
+      grammar_errors?: number;
+      exercise_score?: number;
+      topics_practiced?: string[];
+    }) => {
+      const db = await getDB();
+      const profileId = 'current';
+      const now = new Date().toISOString();
+
+      const existing = await db.get('student_profile', profileId);
+      if (!existing) {
+        return { updated: false, reason: 'no profile found — run placement test first' };
+      }
+
+      // Aggregate vocabulary from the vocabulary store
+      const allVocab = await db.getAll('vocabulary');
+      const uniqueWords = new Set(allVocab.filter(v => v.correct).map(v => v.word.toLowerCase()));
+      if (params.vocabulary_used) {
+        for (const w of params.vocabulary_used) {
+          uniqueWords.add(w.toLowerCase());
+        }
+      }
+
+      // Aggregate corrections from the corrections store
+      const allCorrections = await db.getAll('corrections');
+      const totalErrors = allCorrections.length + (params.grammar_errors ?? 0);
+
+      // Moving average of scores (keep last 10)
+      const updatedScores = [...existing.scores];
+      if (params.exercise_score !== undefined) {
+        updatedScores.push(params.exercise_score);
+      }
+      const recentScores = updatedScores.slice(-10);
+      const avgScore = recentScores.length > 0
+        ? Math.round(recentScores.reduce((a, b) => a + b, 0) / recentScores.length * 100) / 100
+        : existing.avgScore;
+
+      // Estimate level based on average score
+      const estimatedLevel = estimateLevelFromScore(avgScore);
+
+      const updatedProfile = {
+        ...existing,
+        scores: recentScores,
+        knownWords: uniqueWords.size,
+        avgScore,
+        level: estimatedLevel,
+        lastSession: now,
+        updatedAt: now,
+      };
+
+      await db.put('student_profile', updatedProfile);
+
+      // Update the memory fact for future session injection
+      await db.put('memories', {
+        id: 'student-level-current',
+        fact: `The student's current CEFR level is ${estimatedLevel} (avg score: ${avgScore}, known words: ${uniqueWords.size}, total grammar errors: ${totalErrors}). Adapt exercises accordingly.`,
+        source: 'student-profile-update',
+        createdAt: now,
+      });
+
+      return {
+        updated: true,
+        level: estimatedLevel,
+        avgScore,
+        knownWords: uniqueWords.size,
+        scoresCount: recentScores.length,
+      };
+    },
+  },
+
+  get_student_profile: {
+    description: 'Get the complete student profile including CEFR level, known vocabulary count, difficulty areas, and score history. Use when the student asks about their level or progress.',
+    parameters: z.object({}),
+    handler: async () => {
+      const db = await getDB();
+      const profile = await db.get('student_profile', 'current');
+
+      if (!profile) {
+        return {
+          found: false,
+          message: 'No student profile found. A placement test should be conducted first to establish a baseline level.',
+        };
+      }
+
+      // Aggregate difficulty areas from corrections
+      const corrections = await db.getAll('corrections');
+      const ruleCounts: Record<string, number> = {};
+      for (const c of corrections) {
+        ruleCounts[c.rule] = (ruleCounts[c.rule] ?? 0) + 1;
+      }
+      const difficultyAreas = Object.entries(ruleCounts)
+        .sort(([, a], [, b]) => b - a)
+        .slice(0, 5)
+        .map(([rule, count]) => ({ rule, occurrences: count }));
+
+      // Recent topics from localStorage
+      const fluencyMetrics = JSON.parse(localStorage.getItem('fluency_metrics') ?? '[]') as Array<{
+        metric_type: string;
+        value: number;
+        timestamp: string;
+      }>;
+      const recentFluency = fluencyMetrics.slice(-10);
+      const avgFluency = recentFluency.length > 0
+        ? Math.round(recentFluency.reduce((a, m) => a + m.value, 0) / recentFluency.length)
+        : null;
+
+      return {
+        found: true,
+        level: profile.level,
+        avgScore: profile.avgScore,
+        knownWords: profile.knownWords,
+        scoreHistory: profile.scores,
+        sessionsTracked: profile.scores.length,
+        difficultyAreas,
+        avgFluency,
+        lastSession: profile.lastSession,
+        memberSince: profile.createdAt,
+      };
     },
   },
 });
