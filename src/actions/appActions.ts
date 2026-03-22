@@ -1,8 +1,10 @@
 import { z } from 'zod';
 import { createActionRegistry } from './registry';
 import { getDB } from '@/storage/idb';
-import type { CorrectionEntry, TutorReport } from '@/storage/idb';
+import type { CorrectionEntry, TutorReport, VocabularyEntry } from '@/storage/idb';
 import { EXPRESSIONS } from './data/expressions';
+import { getRandomWords } from './data/vocabularyBank';
+import type { VocabTopic, VocabDifficulty } from './data/vocabularyBank';
 import { sessionContext } from './sessionContext';
 
 export const appActions = createActionRegistry({
@@ -312,6 +314,111 @@ export const appActions = createActionRegistry({
           vocabulary: params.vocabulary_used,
         },
       };
+    },
+  },
+
+  start_vocabulary_quiz: {
+    description: 'Start a vocabulary quiz session. Fetches previously missed words for spaced repetition and adds new words from the chosen topic. Sofia conducts the quiz entirely by voice — presenting words one by one, evaluating responses, and giving immediate feedback. Use when the student says "quiz me", "vocabulary quiz", or proactively after 10+ minutes of session.',
+    parameters: z.object({
+      topic: z.enum(['food', 'travel', 'business', 'daily_life', 'emotions', 'technology']).describe('Vocabulary topic for the quiz'),
+      difficulty: z.enum(['beginner', 'intermediate', 'advanced']).describe('Difficulty level matching the student CEFR level'),
+      count: z.number().min(3).max(20).default(10).describe('Number of words in the quiz (default 10)'),
+    }),
+    handler: async ({ topic, difficulty, count }: {
+      topic: VocabTopic;
+      difficulty: VocabDifficulty;
+      count: number;
+    }) => {
+      const db = await getDB();
+      const allVocab = await db.getAll('vocabulary');
+
+      // Find previously missed words for spaced repetition
+      const missedWords = allVocab
+        .filter(v => !v.correct && v.category === topic)
+        .reduce<Map<string, VocabularyEntry>>((acc, v) => {
+          // Keep only the latest attempt per word
+          const existing = acc.get(v.word);
+          if (!existing || v.timestamp > existing.timestamp) {
+            acc.set(v.word, v);
+          }
+          return acc;
+        }, new Map());
+
+      // Also check which words the student already got right (to exclude from new words)
+      const correctWords = new Set(
+        allVocab.filter(v => v.correct).map(v => v.word)
+      );
+
+      // Build quiz: prioritize missed words, then fill with new ones
+      const missedList = [...missedWords.values()].slice(0, Math.ceil(count / 2));
+      const missedWordSet = new Set(missedList.map(m => m.word));
+      const excludeFromNew = new Set([...correctWords, ...missedWordSet]);
+      const remainingCount = count - missedList.length;
+
+      const newWords = getRandomWords(topic, difficulty, remainingCount, excludeFromNew);
+
+      const quizWords = [
+        ...missedList.map(m => ({
+          word: m.word,
+          isReview: true,
+          category: topic,
+        })),
+        ...newWords.map(w => ({
+          word: w.word,
+          translation: w.translation,
+          example: w.example,
+          isReview: false,
+          category: topic,
+        })),
+      ].sort(() => Math.random() - 0.5);
+
+      return {
+        topic,
+        difficulty,
+        totalWords: quizWords.length,
+        reviewWords: missedList.length,
+        newWords: newWords.length,
+        words: quizWords,
+        instructions: [
+          'Present each word one at a time by voice.',
+          'For each word, ask the student to translate it, use it in a sentence, or provide a synonym.',
+          'Review words (isReview: true) are words the student previously got wrong — give extra encouragement.',
+          'After the student responds, immediately call log_quiz_result with the word, whether it was correct, and the category.',
+          'Give brief feedback after each answer: confirm correct answers, gently correct wrong ones with the right answer and an example.',
+          'At the end, summarize the results: total correct, total wrong, and words to review.',
+        ],
+      };
+    },
+  },
+
+  log_quiz_result: {
+    description: 'Log the result of a single quiz question (vocabulary or multiple choice). Called after each student answer during a quiz. Persists to IndexedDB for progress tracking and spaced repetition.',
+    type: 'background' as const,
+    parameters: z.object({
+      word: z.string().describe('The word or phrase being tested'),
+      correct: z.boolean().describe('Whether the student answered correctly'),
+      category: z.string().describe('The topic category (food, travel, business, daily_life, emotions, technology, grammar, idioms, prepositions, tenses)'),
+    }),
+    handler: async ({ word, correct, category }: {
+      word: string;
+      correct: boolean;
+      category: string;
+    }) => {
+      const sessionId = sessionContext.getSessionId();
+
+      const entry: VocabularyEntry = {
+        id: crypto.randomUUID(),
+        word,
+        correct,
+        category,
+        timestamp: new Date().toISOString(),
+        sessionId: sessionId ?? undefined,
+      };
+
+      const db = await getDB();
+      await db.put('vocabulary', entry);
+
+      return { logged: true, id: entry.id, word, correct };
     },
   },
 });
