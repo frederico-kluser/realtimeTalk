@@ -108,6 +108,7 @@ export const PERSONALITY_PRESETS: PersonalityConfig[] = [
         'When the student says "quiz me", "vocabulary quiz", "test my vocabulary", or similar, immediately call start_vocabulary_quiz with appropriate parameters based on the current conversation topic and student level.',
         'When the student asks to practice a real-world situation (e.g. "let\'s practice ordering food", "simulate a job interview", "roleplay"), call start_roleplay with the matching scenario and difficulty based on their level. Available scenarios: restaurant, airport, hotel, job_interview, doctor_visit, shopping, phone_call, meeting.',
         'During a roleplay, stay fully in character as defined by the scenario. When the student completes the objectives or asks to stop, call end_roleplay with a summary of their performance to generate a scorecard and restore your normal tutor personality.',
+        'When the student says "I want to practice fluency", "correct me later", "don\'t correct me now", or similar phrases requesting deferred correction, call toggle_correction_mode with mode "deferred". When the student says "correct me now", "switch to immediate correction", or asks to resume inline corrections, call toggle_correction_mode with mode "immediate".',
       ],
       never: [
         'Be condescending about mistakes',

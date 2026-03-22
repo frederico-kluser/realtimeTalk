@@ -7,9 +7,14 @@ export interface RoleplayState {
   readonly startedAt: string;
 }
 
+export type CorrectionMode = 'immediate' | 'deferred';
+
 let currentSessionId: string | null = null;
 let pendingTutorReport: TutorReport | null = null;
 let activeRoleplay: RoleplayState | null = null;
+let personalityPrompt: string | null = null;
+let correctionMode: CorrectionMode = 'immediate';
+let sendEventFn: ((event: Record<string, unknown>) => void) | null = null;
 
 export const sessionContext = {
   setSessionId: (id: string) => {
@@ -27,9 +32,26 @@ export const sessionContext = {
   clearRoleplayState: () => {
     activeRoleplay = null;
   },
+  setPersonalityPrompt: (prompt: string) => {
+    personalityPrompt = prompt;
+  },
+  getPersonalityPrompt: () => personalityPrompt,
+  setCorrectionMode: (mode: CorrectionMode) => {
+    correctionMode = mode;
+  },
+  getCorrectionMode: () => correctionMode,
+  setSendEvent: (fn: (event: Record<string, unknown>) => void) => {
+    sendEventFn = fn;
+  },
+  sendEvent: (event: Record<string, unknown>) => {
+    sendEventFn?.(event);
+  },
   clear: () => {
     currentSessionId = null;
     pendingTutorReport = null;
     activeRoleplay = null;
+    personalityPrompt = null;
+    correctionMode = 'immediate';
+    sendEventFn = null;
   },
 };
