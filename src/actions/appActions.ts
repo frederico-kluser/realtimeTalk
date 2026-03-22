@@ -9,6 +9,8 @@ import { getRandomQuestions } from './data/grammarQuiz';
 import type { QuizTopic, QuizDifficulty } from './data/grammarQuiz';
 import { sessionContext } from './sessionContext';
 import { similarityScore, findDifferences } from '@/utils/textSimilarity';
+import { getScenario, buildRoleplayInstructions } from '@/personality/scenarios';
+import type { ScenarioId, ScenarioDifficulty } from '@/personality/scenarios';
 
 export const appActions = createActionRegistry({
   search_web: {
@@ -732,6 +734,139 @@ export const appActions = createActionRegistry({
       await db.put('vocabulary', entry);
 
       return { logged: true, id: entry.id, word, correct };
+    },
+  },
+
+  start_roleplay: {
+    description: 'Start an immersive roleplay scenario where Sofia assumes a character role (waiter, receptionist, interviewer, etc.) and the student practices real-world situations. The scenario includes target vocabulary for the student level. Use when the student wants to practice a specific situation, or proactively suggest one to make the lesson more engaging.',
+    parameters: z.object({
+      scenario: z.enum([
+        'restaurant', 'airport', 'hotel', 'job_interview',
+        'doctor_visit', 'shopping', 'phone_call', 'meeting',
+      ]).describe('The roleplay scenario to start'),
+      difficulty: z.enum(['beginner', 'intermediate', 'advanced']).describe('Difficulty level matching the student CEFR level'),
+    }),
+    handler: async ({ scenario: scenarioId, difficulty }: {
+      scenario: ScenarioId;
+      difficulty: ScenarioDifficulty;
+    }) => {
+      const scenario = getScenario(scenarioId);
+      const roleplayInstructions = buildRoleplayInstructions(scenario, difficulty);
+      const vocab = scenario.vocabulary[difficulty];
+
+      // Store roleplay state so end_roleplay knows what to restore
+      sessionContext.setRoleplayState({
+        scenarioId,
+        difficulty,
+        startedAt: new Date().toISOString(),
+      });
+
+      return {
+        instructions: roleplayInstructions,
+        scenario: {
+          id: scenario.id,
+          name: scenario.name,
+          description: scenario.description,
+          aiRole: scenario.aiRole,
+          setting: scenario.setting,
+          studentObjective: scenario.studentObjective,
+          difficulty,
+        },
+        targetVocabulary: vocab,
+        keyPhrases: scenario.keyPhrases,
+        fileContext: {
+          name: `Scenario Vocabulary — ${scenario.name} (${difficulty})`,
+          content: `Target words for this roleplay:\n${vocab.join(', ')}\n\nKey phrases:\n${scenario.keyPhrases.join('\n')}`,
+        },
+        systemActions: [
+          'Call session.update with the "instructions" field from this response to switch Sofia into the roleplay character.',
+          'If fileContexts are supported, inject the "fileContext" as a reference document.',
+          'Stay in character until end_roleplay is called.',
+        ],
+      };
+    },
+  },
+
+  end_roleplay: {
+    description: 'End the current roleplay scenario, generate a performance scorecard, and restore Sofia to her original tutor personality. Call this when the student completes the scenario objectives or asks to stop the roleplay.',
+    parameters: z.object({
+      objectives_completed: z.array(z.string()).describe('List of scenario objectives the student completed during the roleplay'),
+      vocabulary_used: z.number().min(0).describe('Number of target vocabulary words the student used during the roleplay'),
+      grammar_accuracy: z.number().min(0).max(100).describe('Estimated grammar accuracy percentage (0-100) during the roleplay'),
+    }),
+    handler: async ({ objectives_completed, vocabulary_used, grammar_accuracy }: {
+      objectives_completed: string[];
+      vocabulary_used: number;
+      grammar_accuracy: number;
+    }) => {
+      const roleplayState = sessionContext.getRoleplayState();
+      const scenarioInfo = roleplayState
+        ? getScenario(roleplayState.scenarioId)
+        : null;
+
+      const totalVocab = scenarioInfo && roleplayState
+        ? scenarioInfo.vocabulary[roleplayState.difficulty].length
+        : 0;
+
+      const vocabPercentage = totalVocab > 0
+        ? Math.round((vocabulary_used / totalVocab) * 100)
+        : 0;
+
+      const overallScore = Math.round(
+        (objectives_completed.length > 0 ? 40 : 0) +
+        (vocabPercentage * 0.3) +
+        (grammar_accuracy * 0.3)
+      );
+
+      const rating =
+        overallScore >= 90 ? 'excellent' :
+        overallScore >= 75 ? 'good' :
+        overallScore >= 50 ? 'fair' :
+                             'needs_practice';
+
+      const duration = roleplayState
+        ? Math.round((Date.now() - new Date(roleplayState.startedAt).getTime()) / 1000 / 60)
+        : 0;
+
+      // Clear roleplay state
+      sessionContext.clearRoleplayState();
+
+      return {
+        scorecard: {
+          scenario: scenarioInfo?.name ?? 'Unknown',
+          difficulty: roleplayState?.difficulty ?? 'unknown',
+          duration: `${duration} minutes`,
+          overallScore,
+          rating,
+          objectives: {
+            completed: objectives_completed,
+            count: objectives_completed.length,
+          },
+          vocabulary: {
+            used: vocabulary_used,
+            total: totalVocab,
+            percentage: vocabPercentage,
+          },
+          grammarAccuracy: grammar_accuracy,
+        },
+        feedback: {
+          strengths:
+            overallScore >= 75
+              ? 'Great job! You handled the situation naturally and used appropriate vocabulary.'
+              : 'You made a good effort and practiced important conversation patterns.',
+          improvements:
+            vocabPercentage < 50
+              ? `Try to incorporate more scenario-specific vocabulary. You used ${vocabulary_used} out of ${totalVocab} target words.`
+              : grammar_accuracy < 70
+                ? 'Focus on grammar accuracy in your next practice session.'
+                : 'Keep practicing to make your responses even more natural and fluent.',
+          recommendation:
+            overallScore >= 75
+              ? 'You are ready to try this scenario at a higher difficulty level!'
+              : 'Practice this scenario again to improve your score.',
+        },
+        restoreInstructions: 'Restore the original Sofia tutor personality. Stop playing the roleplay character. Return to being Sofia, the language tutor, and continue the normal lesson.',
+      };
     },
   },
 });

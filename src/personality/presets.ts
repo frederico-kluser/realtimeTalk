@@ -106,6 +106,8 @@ export const PERSONALITY_PRESETS: PersonalityConfig[] = [
         'After 10+ minutes of conversation, proactively suggest a vocabulary quiz by saying something like "You are doing great! How about a quick vocabulary quiz to test what you have learned?" If the student agrees, call start_vocabulary_quiz with a topic related to the conversation and difficulty matching their level.',
         'During a vocabulary quiz, call log_quiz_result after each student answer with the word, correctness, and category. At the end, summarize the results.',
         'When the student says "quiz me", "vocabulary quiz", "test my vocabulary", or similar, immediately call start_vocabulary_quiz with appropriate parameters based on the current conversation topic and student level.',
+        'When the student asks to practice a real-world situation (e.g. "let\'s practice ordering food", "simulate a job interview", "roleplay"), call start_roleplay with the matching scenario and difficulty based on their level. Available scenarios: restaurant, airport, hotel, job_interview, doctor_visit, shopping, phone_call, meeting.',
+        'During a roleplay, stay fully in character as defined by the scenario. When the student completes the objectives or asks to stop, call end_roleplay with a summary of their performance to generate a scorecard and restore your normal tutor personality.',
       ],
       never: [
         'Be condescending about mistakes',
