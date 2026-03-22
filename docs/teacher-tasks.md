@@ -20,8 +20,8 @@ Cada tarefa e autocontida — pode ser executada por um agente fresh sem context
 | 3.2 | Modo Correcao Adiada | DONE |
 | 3.3 | Modo Imersao | DONE |
 | 3.4 | Modo Debate / Discussao | DONE |
-| 4.1 | Progresso Adaptativo | TODO |
-| 4.2 | Flashcards SRS | TODO |
+| 4.1 | Progresso Adaptativo | DONE |
+| 4.2 | Flashcards SRS | DONE |
 | 4.3 | Gamificacao | TODO |
 
 ---
@@ -626,7 +626,7 @@ Cada tarefa e autocontida — pode ser executada por um agente fresh sem context
 
 ## Fase 4 — Meta-features
 
-### Task 4.1: Sistema de Progresso Adaptativo
+### Task 4.1: Sistema de Progresso Adaptativo — DONE
 
 ```xml
 <task_prompt>
@@ -673,9 +673,11 @@ Cada tarefa e autocontida — pode ser executada por um agente fresh sem context
 </task_prompt>
 ```
 
+**Resultado:** Actions `update_student_profile` (background) e `get_student_profile` (conversational) criadas em `src/actions/appActions.ts`. Handler agrega metricas no IndexedDB store student_profile: merge de vocabulario, media movel de scores (ultimas 10 sessoes), atualizacao automatica de nivel estimado. Perfil injetado no contexto ao iniciar sessao via `useMemory.ts` com template de nivel/foco. Regras adaptativas adicionadas ao preset (A1-A2/B1-B2/C1-C2). Typecheck passa.
+
 ---
 
-### Task 4.2: Flashcards com Repeticao Espacada (SRS)
+### Task 4.2: Flashcards com Repeticao Espacada (SRS) — DONE
 
 ```xml
 <task_prompt>
@@ -721,6 +723,8 @@ Cada tarefa e autocontida — pode ser executada por um agente fresh sem context
   </validation>
 </task_prompt>
 ```
+
+**Resultado:** `src/utils/srs.ts` criado com algoritmo SM-2 simplificado: `calculateNextReview(correct, currentInterval, easeFactor)` retorna nextInterval, nextEaseFactor e nextReviewDate. Intervalo min 1 dia, max 365 dias, ease factor min 1.3. Actions `flashcard_session` (conversational), `update_flashcard` (background) e `add_flashcard` (background) criadas em `src/actions/appActions.ts`. Handler busca cards pendentes (next_review <= now) do IndexedDB store flashcards. Sofia chama add_flashcard automaticamente ao ensinar vocabulario novo. Regras adicionadas ao preset. Typecheck passa.
 
 ---
 
