@@ -1308,4 +1308,179 @@ export const appActions = createActionRegistry({
       };
     },
   },
+
+  // --- Gamification (Task 4.3) ---
+
+  award_points: {
+    description: 'Silently award points to the student for completing activities. Call this after: session completed (+10), perfect quiz (+25), first roleplay (+15). Do not announce point awards unless the student asks about their score.',
+    type: 'background' as const,
+    parameters: z.object({
+      reason: z.string().describe('Why the points are being awarded (e.g. "session_completed", "perfect_quiz", "first_roleplay")'),
+      points: z.number().min(1).describe('Number of points to award'),
+    }),
+    handler: async ({ reason, points }: { reason: string; points: number }) => {
+      const db = await getDB();
+      const id = 'current';
+      const existing = await db.get('gamification', id);
+
+      const now = new Date().toISOString();
+      const currentPoints = existing?.points ?? 0;
+      const currentAchievements = existing?.achievements ?? [];
+
+      const updated: import('@/storage/idb').GamificationData = {
+        id,
+        points: currentPoints + points,
+        streak: existing?.streak ?? 0,
+        achievements: [...currentAchievements],
+        lastActive: now,
+      };
+
+      await db.put('gamification', updated);
+
+      return { awarded: true, reason, points, totalPoints: updated.points };
+    },
+  },
+
+  check_streak: {
+    description: 'Check the student current practice streak (consecutive days with sessions of 5+ minutes). Use when the student asks "what is my streak?", "how many days in a row?", or at the start of a session to motivate them.',
+    parameters: z.object({}),
+    handler: async () => {
+      const db = await getDB();
+      const allSessions = await db.getAllFromIndex('sessions', 'by-date');
+
+      // Filter sessions >= 5 minutes (300000ms)
+      const validSessions = allSessions.filter(s => s.durationMs >= 300000);
+
+      // Get unique dates (YYYY-MM-DD)
+      const uniqueDates = [...new Set(
+        validSessions.map(s => s.startedAt.slice(0, 10))
+      )].sort().reverse();
+
+      if (uniqueDates.length === 0) {
+        return { streak: 0, message: 'No sessions yet. Start practicing to build your streak!' };
+      }
+
+      // Calculate streak from today/yesterday backwards
+      const today = new Date().toISOString().slice(0, 10);
+      const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+
+      let streak = 0;
+      let checkDate: string;
+
+      if (uniqueDates[0] === today) {
+        checkDate = today;
+      } else if (uniqueDates[0] === yesterday) {
+        checkDate = yesterday;
+      } else {
+        // Last session was more than 1 day ago — streak is broken
+        return { streak: 0, lastSession: uniqueDates[0], message: 'Your streak was broken. Start a new one today!' };
+      }
+
+      const dateSet = new Set(uniqueDates);
+      while (dateSet.has(checkDate)) {
+        streak++;
+        const prev = new Date(checkDate);
+        prev.setDate(prev.getDate() - 1);
+        checkDate = prev.toISOString().slice(0, 10);
+      }
+
+      // Persist streak
+      const id = 'current';
+      const existing = await db.get('gamification', id);
+      if (existing) {
+        await db.put('gamification', { ...existing, streak, lastActive: new Date().toISOString() });
+      }
+
+      const milestoneMessages: Record<number, string> = {
+        3: 'Three days in a row! You are building a great habit!',
+        5: 'Five day streak! Incredible dedication!',
+        7: 'A full week of practice! You are on fire!',
+        14: 'Two weeks straight! Your commitment is truly impressive!',
+        30: 'Thirty days! You are a language learning machine!',
+      };
+
+      const milestone = milestoneMessages[streak];
+
+      return {
+        streak,
+        lastSession: uniqueDates[0],
+        totalSessionDays: uniqueDates.length,
+        ...(milestone ? { milestone } : {}),
+        message: streak >= 7
+          ? `Amazing! ${streak} days in a row!`
+          : streak >= 3
+            ? `Great work! ${streak} days and counting!`
+            : `${streak} day${streak > 1 ? 's' : ''} streak. Keep it going!`,
+      };
+    },
+  },
+
+  get_achievements: {
+    description: 'Get the student unlocked achievements (badges) and next milestones. Use when the student asks "what are my achievements?", "show my badges", "what did I earn?", or to occasionally motivate them.',
+    parameters: z.object({}),
+    handler: async () => {
+      const db = await getDB();
+      const gamData = await db.get('gamification', 'current');
+      const profile = await db.get('student_profile', 'current');
+      const allFlashcards = await db.getAll('flashcards');
+      const allVocab = await db.getAll('vocabulary');
+      const allSessions = await db.getAllFromIndex('sessions', 'by-date');
+      const allCorrections = await db.getAll('corrections');
+
+      const totalPoints = gamData?.points ?? 0;
+      const streak = gamData?.streak ?? 0;
+      const totalSessions = allSessions.filter(s => s.durationMs >= 300000).length;
+      const totalFlashcards = allFlashcards.length;
+      const totalVocabQuizzes = allVocab.length;
+      const correctVocab = allVocab.filter(v => v.correct).length;
+      const totalCorrections = allCorrections.length;
+      const hasRoleplay = allSessions.some(s => s.actionsTriggered.includes('start_roleplay'));
+      const hasDebate = allSessions.some(s => s.actionsTriggered.includes('start_debate'));
+      const level = profile?.level;
+
+      // Achievement definitions
+      const achievementDefs = [
+        { id: 'first_steps', name: 'First Steps', description: 'Complete your first session', icon: '1', check: () => totalSessions >= 1 },
+        { id: 'getting_started', name: 'Getting Started', description: 'Complete 5 sessions', icon: '5', check: () => totalSessions >= 5 },
+        { id: 'dedicated_learner', name: 'Dedicated Learner', description: 'Complete 25 sessions', icon: '25', check: () => totalSessions >= 25 },
+        { id: 'streak_5', name: 'Five Alive', description: 'Maintain a 5-day streak', icon: 'S5', check: () => streak >= 5 },
+        { id: 'streak_30', name: 'Monthly Master', description: 'Maintain a 30-day streak', icon: 'S30', check: () => streak >= 30 },
+        { id: 'quiz_master', name: 'Quiz Master', description: 'Answer 50 quiz questions correctly', icon: 'Q', check: () => correctVocab >= 50 },
+        { id: 'vocab_collector', name: 'Vocabulary Collector', description: 'Collect 100 flashcards', icon: 'FC', check: () => totalFlashcards >= 100 },
+        { id: 'first_roleplay', name: 'Role Player', description: 'Complete your first roleplay scenario', icon: 'RP', check: () => hasRoleplay },
+        { id: 'debater', name: 'Debater', description: 'Complete your first debate exercise', icon: 'DB', check: () => hasDebate },
+        { id: 'level_up', name: 'Level Up', description: 'Reach B1 level or higher', icon: 'LV', check: () => level !== undefined && ['B1', 'B2', 'C1', 'C2'].includes(level) },
+        { id: 'error_hunter', name: 'Error Hunter', description: 'Have 50+ grammar corrections logged (learning from mistakes!)', icon: 'EH', check: () => totalCorrections >= 50 },
+        { id: 'century', name: 'Century Club', description: 'Earn 100 total points', icon: '100', check: () => totalPoints >= 100 },
+      ];
+
+      const unlocked = achievementDefs.filter(a => a.check());
+      const locked = achievementDefs.filter(a => !a.check());
+
+      // Persist unlocked achievement IDs
+      const unlockedIds = unlocked.map(a => a.id);
+      const existingIds = gamData?.achievements ?? [];
+      const newlyUnlocked = unlockedIds.filter(id => !existingIds.includes(id));
+
+      if (newlyUnlocked.length > 0 && gamData) {
+        await db.put('gamification', {
+          ...gamData,
+          achievements: [...new Set([...existingIds, ...unlockedIds])],
+          lastActive: new Date().toISOString(),
+        });
+      }
+
+      return {
+        totalPoints,
+        streak,
+        unlocked: unlocked.map(a => ({ id: a.id, name: a.name, description: a.description, icon: a.icon })),
+        unlockedCount: unlocked.length,
+        totalAchievements: achievementDefs.length,
+        ...(newlyUnlocked.length > 0
+          ? { newlyUnlocked: newlyUnlocked.map(id => achievementDefs.find(a => a.id === id)!.name) }
+          : {}),
+        nextMilestones: locked.slice(0, 3).map(a => ({ name: a.name, description: a.description })),
+      };
+    },
+  },
 });

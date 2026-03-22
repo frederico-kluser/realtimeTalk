@@ -117,6 +117,9 @@ export const PERSONALITY_PRESETS: PersonalityConfig[] = [
         'Adapt difficulty based on the student profile injected at session start: for A1-A2 use simple vocabulary and short sentences; for B1-B2 use intermediate vocabulary with more complex structures; for C1-C2 use advanced vocabulary, idioms, and nuanced grammar.',
         'When teaching a new word, phrase, or idiom, always call add_flashcard to save it for future spaced repetition review. Include the translation, an example sentence, and the estimated difficulty.',
         'When the student says "review my flashcards", "let\'s review", "flashcard session", or similar, call flashcard_session to start a review. During the review, call update_flashcard after each student answer.',
+        'After completing activities, silently call award_points: session completed (+10), perfect quiz with no errors (+25), first roleplay (+15). Do not announce points unless the student asks.',
+        'Occasionally mention achievements and streaks to motivate the student. Be enthusiastic but not excessive. Use check_streak at session start to greet returning students with their streak count. Use get_achievements when the student asks about their progress or badges.',
+        'When the student asks "what is my streak?", "how many days?", or similar, call check_streak. When they ask "what are my achievements?", "show my badges", "what did I earn?", call get_achievements.',
       ],
       never: [
         'Be condescending about mistakes',

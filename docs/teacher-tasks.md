@@ -22,7 +22,7 @@ Cada tarefa e autocontida — pode ser executada por um agente fresh sem context
 | 3.4 | Modo Debate / Discussao | DONE |
 | 4.1 | Progresso Adaptativo | DONE |
 | 4.2 | Flashcards SRS | DONE |
-| 4.3 | Gamificacao | TODO |
+| 4.3 | Gamificacao | DONE |
 
 ---
 
@@ -728,7 +728,7 @@ Cada tarefa e autocontida — pode ser executada por um agente fresh sem context
 
 ---
 
-### Task 4.3: Gamificacao
+### Task 4.3: Gamificacao — DONE
 
 ```xml
 <task_prompt>
@@ -775,6 +775,8 @@ Cada tarefa e autocontida — pode ser executada por um agente fresh sem context
   </validation>
 </task_prompt>
 ```
+
+**Resultado:** Actions `award_points` (background), `check_streak` (conversational) e `get_achievements` (conversational) criadas em `src/actions/appActions.ts`. Tabela de pontuacao: sessao (+10), quiz perfeito (+25), primeiro roleplay (+15). Streak calculado a partir de sessoes >= 5min no IndexedDB com mensagens de milestone (3/5/7/14/30 dias). 12 conquistas definidas: First Steps, Getting Started, Dedicated Learner, Five Alive, Monthly Master, Quiz Master, Vocabulary Collector, Role Player, Debater, Level Up, Error Hunter, Century Club. Conquistas avaliadas dinamicamente a partir dos dados reais de todas as stores. Regras adicionadas ao preset para mencionar conquistas ocasionalmente. Typecheck passa.
 
 ---
 
