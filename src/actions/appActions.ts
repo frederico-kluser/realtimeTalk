@@ -904,4 +904,68 @@ export const appActions = createActionRegistry({
       };
     },
   },
+
+  toggle_immersion_mode: {
+    description: 'Toggle immersion mode. When enabled, the tutor speaks ONLY in the target language, forcing total immersion. If the student does not understand, simplify but never switch languages. Use when the student says "immersion mode", "let\'s do immersion", "speak only in X", or similar. To deactivate, use when student says "exit immersion", "stop immersion mode", etc.',
+    parameters: z.object({
+      enabled: z.boolean().describe('Whether to enable or disable immersion mode'),
+      target_language: z.string().describe('The target language to immerse in, e.g. "English", "Spanish", "French"'),
+    }),
+    handler: async ({ enabled, target_language }: { enabled: boolean; target_language: string }) => {
+      if (enabled) {
+        const state = { enabled, target_language, activatedAt: new Date().toISOString() };
+        localStorage.setItem('immersion_mode', JSON.stringify(state));
+      } else {
+        localStorage.removeItem('immersion_mode');
+      }
+
+      const immersionInstructions = enabled
+        ? `You MUST speak ONLY in ${target_language}. If the student doesn't understand, simplify your language but NEVER switch to another language. Use the native language ONLY as an absolute last resort.`
+        : 'Immersion mode deactivated. You may now speak in any language as appropriate for the student. Resume normal multilingual tutoring behavior.';
+
+      return {
+        enabled,
+        target_language,
+        _immersionInstructions: immersionInstructions,
+      };
+    },
+  },
+
+  log_fluency_metric: {
+    description: 'Silently log a fluency metric during conversation. Call this periodically to track the student fluency over time without interrupting the conversation.',
+    type: 'background' as const,
+    parameters: z.object({
+      metric_type: z.enum(['response_time', 'sentence_complexity', 'vocabulary_range', 'error_rate', 'self_correction']).describe('The type of fluency metric being logged'),
+      value: z.number().min(0).max(100).describe('Metric value (0-100 scale)'),
+      notes: z.string().optional().describe('Optional context or observation about this metric'),
+    }),
+    handler: async ({ metric_type, value, notes }: { metric_type: string; value: number; notes?: string }) => {
+      const sessionId = sessionContext.getSessionId();
+      const key = 'fluency_metrics';
+      const existing = JSON.parse(localStorage.getItem(key) ?? '[]') as unknown[];
+      const entry = { metric_type, value, notes, sessionId, timestamp: new Date().toISOString() };
+      const updated = [...existing, entry].slice(-200);
+      localStorage.setItem(key, JSON.stringify(updated));
+      return { logged: true, metric_type, value };
+    },
+  },
+
+  log_vocabulary_usage: {
+    description: 'Silently log new or notable vocabulary used by the student during conversation. Call this when the student uses new words, advanced vocabulary, or words from previous lessons.',
+    type: 'background' as const,
+    parameters: z.object({
+      words: z.array(z.string()).describe('List of vocabulary words used by the student'),
+      context: z.string().describe('The sentence or context in which the words were used'),
+      is_new: z.boolean().describe('Whether these are new words the student has not used before'),
+    }),
+    handler: async ({ words, context, is_new }: { words: string[]; context: string; is_new: boolean }) => {
+      const sessionId = sessionContext.getSessionId();
+      const key = 'vocabulary_usage';
+      const existing = JSON.parse(localStorage.getItem(key) ?? '[]') as unknown[];
+      const entry = { words, context, is_new, sessionId, timestamp: new Date().toISOString() };
+      const updated = [...existing, entry].slice(-500);
+      localStorage.setItem(key, JSON.stringify(updated));
+      return { logged: true, wordsCount: words.length, is_new };
+    },
+  },
 });
