@@ -6,6 +6,7 @@ import { EXPRESSIONS } from './data/expressions';
 import { getRandomWords } from './data/vocabularyBank';
 import type { VocabTopic, VocabDifficulty } from './data/vocabularyBank';
 import { sessionContext } from './sessionContext';
+import { similarityScore, findDifferences } from '@/utils/textSimilarity';
 
 export const appActions = createActionRegistry({
   search_web: {
@@ -110,6 +111,169 @@ export const appActions = createActionRegistry({
     handler: async ({ event }: { event: string }) => {
       console.log('[analytics]', event);
       return { logged: true };
+    },
+  },
+
+  pronunciation_exercise: {
+    description: 'Start a pronunciation exercise. Returns a phrase for the student to repeat aloud. After the student speaks, call evaluate_pronunciation with the expected and spoken text.',
+    parameters: z.object({
+      difficulty: z.enum(['beginner', 'intermediate', 'advanced']).describe('Student difficulty level'),
+      focus: z.enum(['vowels', 'consonants', 'intonation', 'general']).optional().describe('Phonetic focus area'),
+    }),
+    handler: async ({ difficulty, focus }: { difficulty: 'beginner' | 'intermediate' | 'advanced'; focus?: 'vowels' | 'consonants' | 'intonation' | 'general' }) => {
+      const phrases: Record<string, Record<string, string[]>> = {
+        beginner: {
+          vowels: [
+            'The cat sat on the mat.',
+            'I see a big tree.',
+            'She ate a piece of cake.',
+          ],
+          consonants: [
+            'The red bus stops here.',
+            'Put the cup on the desk.',
+            'Bob built a big boat.',
+          ],
+          intonation: [
+            'Is this your book?',
+            'What a beautiful day!',
+            'I like apples.',
+          ],
+          general: [
+            'Good morning, how are you?',
+            'I would like a glass of water.',
+            'The weather is nice today.',
+          ],
+        },
+        intermediate: {
+          vowels: [
+            'The curious tourist explored the ancient ruins.',
+            'She usually chooses beautiful blue shoes.',
+            'The eagle soared above the open ocean.',
+          ],
+          consonants: [
+            'The strength of the bridge surprised the architects.',
+            'She sells seashells by the seashore.',
+            'The sixth sick sheik sat on a thick silk sheet.',
+          ],
+          intonation: [
+            'You finished the entire project by yourself?',
+            'I never expected such an incredible performance!',
+            'Although it rained, we decided to go hiking anyway.',
+          ],
+          general: [
+            'The weather is particularly pleasant this afternoon.',
+            'Could you please explain that one more time?',
+            'I have been studying English for three years.',
+          ],
+        },
+        advanced: {
+          vowels: [
+            'The entrepreneurial philanthropist inaugurated the environmental initiative.',
+            'Thoroughly thoughtful people routinely evaluate their philosophical viewpoints.',
+            'The archaeological excavation revealed previously undiscovered hieroglyphics.',
+          ],
+          consonants: [
+            'The distinguished linguist articulated complex theoretical frameworks.',
+            'Sophisticated statistical methodologies strengthened the hypothesis.',
+            'The inexplicable phenomenon perplexed theastrophysicists.',
+          ],
+          intonation: [
+            'Had I known about the circumstances, I would have approached the situation differently.',
+            'Not only did she complete the marathon, but she also set a new personal record!',
+            'The more you practice pronunciation, the more natural it becomes, wouldn\'t you agree?',
+          ],
+          general: [
+            'Despite the unprecedented challenges, the team demonstrated remarkable resilience.',
+            'The comprehensive analysis revealed several previously overlooked discrepancies.',
+            'Contemporary architectural designs increasingly prioritize environmental sustainability.',
+          ],
+        },
+      };
+
+      const focusArea = focus ?? 'general';
+      const pool = phrases[difficulty][focusArea];
+      const phrase = pool[Math.floor(Math.random() * pool.length)];
+
+      return {
+        phrase,
+        difficulty,
+        focus: focusArea,
+        instructions: `Say this phrase to the student and ask them to repeat it. After they speak, call evaluate_pronunciation with expected="${phrase}" and the student's transcribed speech.`,
+      };
+    },
+  },
+
+  evaluate_pronunciation: {
+    description: 'Evaluate the student pronunciation by comparing expected text with their spoken transcription. Returns a similarity score and problematic words. Note: comparison is textual (based on transcription), not phonetic.',
+    parameters: z.object({
+      expected: z.string().describe('The original phrase the student was asked to repeat'),
+      spoken: z.string().describe('The transcribed text of what the student actually said'),
+    }),
+    handler: async ({ expected, spoken }: { expected: string; spoken: string }) => {
+      const score = similarityScore(expected, spoken);
+      const problematicWords = findDifferences(expected, spoken);
+
+      return {
+        score: Math.round(score * 100) / 100,
+        percentage: `${Math.round(score * 100)}%`,
+        problematicWords,
+        expected,
+        spoken,
+        rating:
+          score >= 0.95 ? 'excellent' :
+          score >= 0.8  ? 'good' :
+          score >= 0.6  ? 'fair' :
+                          'needs_practice',
+      };
+    },
+  },
+
+  log_pronunciation: {
+    description: 'Log words the student had difficulty pronouncing for tracking recurring pronunciation issues. Called after evaluate_pronunciation when problematic words are found.',
+    type: 'background' as const,
+    parameters: z.object({
+      words: z.array(z.string()).describe('Words the student mispronounced or omitted'),
+      expected_phrase: z.string().describe('The full expected phrase'),
+      score: z.number().min(0).max(1).describe('The similarity score from evaluate_pronunciation'),
+    }),
+    handler: async ({ words, expected_phrase, score }: { words: string[]; expected_phrase: string; score: number }) => {
+      const sessionId = sessionContext.getSessionId();
+      const key = 'pronunciation_difficulties';
+      const existing = JSON.parse(localStorage.getItem(key) ?? '[]') as Array<{
+        word: string;
+        count: number;
+        lastSeen: string;
+        sessions: string[];
+      }>;
+
+      const now = new Date().toISOString();
+
+      for (const word of words) {
+        const entry = existing.find((e) => e.word === word);
+        if (entry) {
+          entry.count += 1;
+          entry.lastSeen = now;
+          if (sessionId && !entry.sessions.includes(sessionId)) {
+            entry.sessions.push(sessionId);
+          }
+        } else {
+          existing.push({
+            word,
+            count: 1,
+            lastSeen: now,
+            sessions: sessionId ? [sessionId] : [],
+          });
+        }
+      }
+
+      localStorage.setItem(key, JSON.stringify(existing));
+
+      return {
+        logged: true,
+        wordsTracked: words.length,
+        expectedPhrase: expected_phrase,
+        score,
+      };
     },
   },
 
