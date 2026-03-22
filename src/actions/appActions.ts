@@ -598,6 +598,112 @@ export const appActions = createActionRegistry({
     },
   },
 
+  start_dictation: {
+    description: 'Start a dictation exercise. Returns a list of phrases for Sofia to dictate one at a time. After the student repeats each phrase, call check_dictation with the expected and spoken text. Speak slowly and clearly during dictation.',
+    parameters: z.object({
+      difficulty: z.enum(['beginner', 'intermediate', 'advanced']).describe('Student difficulty level'),
+      topic: z.string().optional().describe('Optional topic hint (e.g. "travel", "food", "work")'),
+      count: z.number().min(1).max(10).default(5).describe('Number of phrases to dictate (default 5)'),
+    }),
+    handler: async ({ difficulty, topic, count }: {
+      difficulty: 'beginner' | 'intermediate' | 'advanced';
+      topic?: string;
+      count: number;
+    }) => {
+      const phrases: Record<string, string[]> = {
+        beginner: [
+          'I like to eat breakfast every morning.',
+          'The cat is sleeping on the sofa.',
+          'Can you help me find the bus stop?',
+          'She has two brothers and one sister.',
+          'We went to the park after school.',
+          'The store closes at nine o\'clock.',
+          'I need to buy some milk and bread.',
+          'My favorite color is blue.',
+          'It is raining outside today.',
+          'He works at a hospital near my house.',
+        ],
+        intermediate: [
+          'The meeting has been rescheduled to next Thursday afternoon.',
+          'She couldn\'t believe how quickly the time had passed.',
+          'If you had told me earlier, I would have made different plans.',
+          'The restaurant on the corner serves excellent Italian food.',
+          'Despite the heavy traffic, we managed to arrive on time.',
+          'He has been working on this project for over three months.',
+          'The weather forecast predicts sunshine for the rest of the week.',
+          'Could you please send me the report before the end of the day?',
+          'They decided to postpone the trip until the situation improved.',
+          'I would appreciate it if you could give me some feedback.',
+        ],
+        advanced: [
+          'The unprecedented economic downturn has significantly impacted small businesses throughout the region.',
+          'Notwithstanding the considerable challenges, the research team persevered and published their findings.',
+          'The committee unanimously agreed that the proposed amendments would strengthen the existing framework.',
+          'Had the negotiations not broken down, a mutually beneficial agreement could have been reached.',
+          'The archaeological discovery fundamentally altered our understanding of early human civilization.',
+          'Contemporary approaches to environmental sustainability require unprecedented levels of international cooperation.',
+          'The pharmaceutical company announced breakthrough results from their latest clinical trial.',
+          'In retrospect, the decision to diversify the portfolio proved to be remarkably prescient.',
+          'The intricate relationship between technological innovation and societal transformation continues to evolve.',
+          'Scholars have long debated whether cultural identity is primarily shaped by heritage or environment.',
+        ],
+      };
+
+      const pool = phrases[difficulty];
+      const shuffled = [...pool].sort(() => Math.random() - 0.5);
+      const selected = shuffled.slice(0, Math.min(count, pool.length));
+
+      return {
+        difficulty,
+        topic: topic ?? 'general',
+        phrases: selected,
+        totalPhrases: selected.length,
+        instructions: [
+          'Dictate each phrase clearly, one at a time, at a slow and natural pace.',
+          'After dictating, wait for the student to repeat what they heard.',
+          'Then call check_dictation with the original phrase (expected) and the student\'s transcribed speech (spoken).',
+          'Give feedback based on the score: highlight missed or incorrect words.',
+          'If the student struggles, repeat the phrase more slowly or break it into smaller parts.',
+          ...(topic ? [`Relate the exercise to the topic "${topic}" when giving context or encouragement.`] : []),
+        ],
+      };
+    },
+  },
+
+  check_dictation: {
+    description: 'Check the student dictation attempt by comparing the expected phrase with what they said. Returns similarity score and specific errors. Tolerant of accent and punctuation differences.',
+    parameters: z.object({
+      expected: z.string().describe('The original phrase that was dictated'),
+      spoken: z.string().describe('The transcribed text of what the student actually said'),
+    }),
+    handler: async ({ expected, spoken }: { expected: string; spoken: string }) => {
+      const score = similarityScore(expected, spoken);
+      const missedWords = findDifferences(expected, spoken);
+
+      const rating =
+        score >= 0.95 ? 'perfect' :
+        score >= 0.85 ? 'excellent' :
+        score >= 0.7  ? 'good' :
+        score >= 0.5  ? 'fair' :
+                        'needs_practice';
+
+      return {
+        score: Math.round(score * 100) / 100,
+        percentage: `${Math.round(score * 100)}%`,
+        rating,
+        missedWords,
+        expected,
+        spoken,
+        feedback:
+          score >= 0.95 ? 'Almost perfect! The student captured the phrase accurately.' :
+          score >= 0.85 ? 'Very good! Only minor differences detected.' :
+          score >= 0.7  ? `Good effort. The student missed or changed these words: ${missedWords.join(', ')}.` :
+          score >= 0.5  ? `Fair attempt. Several words need attention: ${missedWords.join(', ')}. Consider repeating more slowly.` :
+                          `The student had significant difficulty. Missed words: ${missedWords.join(', ')}. Try dictating shorter segments.`,
+      };
+    },
+  },
+
   log_quiz_result: {
     description: 'Log the result of a single quiz question (vocabulary or multiple choice). Called after each student answer during a quiz. Persists to IndexedDB for progress tracking and spaced repetition.',
     type: 'background' as const,

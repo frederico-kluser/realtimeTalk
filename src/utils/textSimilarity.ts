@@ -12,6 +12,8 @@
  */
 function normalize(text: string): string {
   return text
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '') // strip diacritical marks (accent tolerance)
     .toLowerCase()
     .replace(/[^\p{L}\p{N}\s]/gu, '')
     .replace(/\s+/g, ' ')
