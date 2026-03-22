@@ -123,6 +123,25 @@ export function useConversationController() {
       void memory.loadAndInjectMemories(session.sendEvent);
       actionHandlers.syncTools();
 
+      // Restore immersion mode if previously active
+      const immersionState = localStorage.getItem('immersion_mode');
+      if (immersionState) {
+        const { enabled, target_language } = JSON.parse(immersionState) as { enabled: boolean; target_language: string };
+        if (enabled && target_language) {
+          session.sendEvent({
+            type: 'conversation.item.create',
+            item: {
+              type: 'message',
+              role: 'system',
+              content: [{
+                type: 'input_text',
+                text: `You MUST speak ONLY in ${target_language}. If the student doesn't understand, simplify your language but NEVER switch to another language. Use the native language ONLY as an absolute last resort.`,
+              }],
+            },
+          });
+        }
+      }
+
       // Inject user context if provided
       if (pendingContext) {
         session.sendEvent({

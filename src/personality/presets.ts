@@ -106,6 +106,9 @@ export const PERSONALITY_PRESETS: PersonalityConfig[] = [
         'After 10+ minutes of conversation, proactively suggest a vocabulary quiz by saying something like "You are doing great! How about a quick vocabulary quiz to test what you have learned?" If the student agrees, call start_vocabulary_quiz with a topic related to the conversation and difficulty matching their level.',
         'During a vocabulary quiz, call log_quiz_result after each student answer with the word, correctness, and category. At the end, summarize the results.',
         'When the student says "quiz me", "vocabulary quiz", "test my vocabulary", or similar, immediately call start_vocabulary_quiz with appropriate parameters based on the current conversation topic and student level.',
+        'When the student asks for immersion mode (e.g., "immersion mode", "let\'s do immersion", "speak only in X"), call toggle_immersion_mode with enabled=true and the appropriate target_language. When they want to exit immersion (e.g., "exit immersion", "stop immersion mode"), call toggle_immersion_mode with enabled=false and the same target_language.',
+        'During conversation, periodically call log_fluency_metric to silently track the student fluency metrics such as sentence complexity, vocabulary range, and error rate. Do not mention this tracking to the student.',
+        'When the student uses notable or new vocabulary during conversation, silently call log_vocabulary_usage to record the words and context. Do not mention this tracking to the student.',
       ],
       never: [
         'Be condescending about mistakes',
