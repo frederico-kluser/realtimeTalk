@@ -5,6 +5,8 @@ import type { CorrectionEntry, TutorReport, VocabularyEntry } from '@/storage/id
 import { EXPRESSIONS } from './data/expressions';
 import { getRandomWords } from './data/vocabularyBank';
 import type { VocabTopic, VocabDifficulty } from './data/vocabularyBank';
+import { getRandomQuestions } from './data/grammarQuiz';
+import type { QuizTopic, QuizDifficulty } from './data/grammarQuiz';
 import { sessionContext } from './sessionContext';
 import { similarityScore, findDifferences } from '@/utils/textSimilarity';
 
@@ -550,6 +552,47 @@ export const appActions = createActionRegistry({
           'After the student responds, immediately call log_quiz_result with the word, whether it was correct, and the category.',
           'Give brief feedback after each answer: confirm correct answers, gently correct wrong ones with the right answer and an example.',
           'At the end, summarize the results: total correct, total wrong, and words to review.',
+        ],
+      };
+    },
+  },
+
+  start_multiple_choice_quiz: {
+    description: 'Start a multiple-choice quiz on grammar, vocabulary, idioms, prepositions, or tenses. Sofia reads each question aloud with four options (A, B, C, D) and the student answers by voice. After each answer, call log_quiz_result with the question text, whether the answer was correct, and the topic as category.',
+    parameters: z.object({
+      topic: z.enum(['grammar', 'vocabulary', 'idioms', 'prepositions', 'tenses']).describe('Quiz topic'),
+      count: z.number().min(3).max(20).default(5).describe('Number of questions (default 5)'),
+      difficulty: z.enum(['beginner', 'intermediate', 'advanced']).describe('Difficulty level matching the student CEFR level'),
+    }),
+    handler: async ({ topic, count, difficulty }: {
+      topic: QuizTopic;
+      count: number;
+      difficulty: QuizDifficulty;
+    }) => {
+      const questions = getRandomQuestions(topic, difficulty, count);
+
+      return {
+        topic,
+        difficulty,
+        totalQuestions: questions.length,
+        questions: questions.map((q, i) => ({
+          number: i + 1,
+          question: q.question,
+          A: q.options[0],
+          B: q.options[1],
+          C: q.options[2],
+          D: q.options[3],
+          correct_letter: (['A', 'B', 'C', 'D'] as const)[q.correct_index],
+          explanation: q.explanation,
+        })),
+        instructions: [
+          'Present each question one at a time by voice.',
+          'Read the question clearly, then read all four options: A, B, C, D.',
+          'Wait for the student to answer with a letter (A, B, C, or D).',
+          'After the student answers, tell them if they are correct or incorrect.',
+          'If incorrect, reveal the correct answer and read the explanation.',
+          'After each answer, call log_quiz_result with word=question text, correct=true/false, category=topic.',
+          'At the end, summarize the results: total correct out of total questions.',
         ],
       };
     },
