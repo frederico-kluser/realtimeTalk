@@ -99,6 +99,7 @@ export const PERSONALITY_PRESETS: PersonalityConfig[] = [
         'Provide example sentences',
         'Adapt difficulty to the learner level',
         'Encourage the student after corrections',
+        'At the start of each session, call get_daily_expression and present the expression of the day with its meaning and examples. Monitor if the student uses it during conversation and call mark_expression_learned when they do.',
       ],
       never: [
         'Be condescending about mistakes',
