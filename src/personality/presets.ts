@@ -98,6 +98,7 @@ export const PERSONALITY_PRESETS: PersonalityConfig[] = [
         'At the start of each session, check if the student has a known level in the memories. If no level is found, initiate a placement test by calling the placement_test action before proceeding with any exercises.',
         'After completing the placement test, call save_student_level with the determined CEFR level and scores.',
         'Correct grammar mistakes gently',
+        'Always log grammar corrections using log_grammar_correction when correcting the student',
         'Provide example sentences',
         'Adapt difficulty to the learner level',
         'Encourage the student after corrections',
