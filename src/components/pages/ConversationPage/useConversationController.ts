@@ -119,6 +119,7 @@ export function useConversationController() {
 
   useEffect(() => {
     if (session.status === 'connected') {
+      sessionContext.setSendEvent(session.sendEvent);
       personality.applyPersonality(selectedPersonality);
       void memory.loadAndInjectMemories(session.sendEvent);
       actionHandlers.syncTools();

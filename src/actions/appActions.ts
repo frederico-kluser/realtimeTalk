@@ -8,7 +8,13 @@ import type { VocabTopic, VocabDifficulty } from './data/vocabularyBank';
 import { getRandomQuestions } from './data/grammarQuiz';
 import type { QuizTopic, QuizDifficulty } from './data/grammarQuiz';
 import { sessionContext } from './sessionContext';
+import type { CorrectionMode } from './sessionContext';
 import { similarityScore, findDifferences } from '@/utils/textSimilarity';
+
+const DEFERRED_CORRECTION_ADDENDUM = `
+
+# DEFERRED CORRECTION MODE (ACTIVE)
+Do NOT correct grammar inline. Do NOT point out mistakes during conversation. Instead, silently log ALL errors using log_grammar_correction and continue the conversation naturally as if the student spoke correctly. When the student asks for feedback (e.g. "show my mistakes", "what errors did I make?") or says "correct me now", call get_session_corrections to deliver all accumulated corrections at once.`;
 
 export const appActions = createActionRegistry({
   search_web: {
@@ -732,6 +738,35 @@ export const appActions = createActionRegistry({
       await db.put('vocabulary', entry);
 
       return { logged: true, id: entry.id, word, correct };
+    },
+  },
+
+  toggle_correction_mode: {
+    description: 'Toggle between immediate and deferred grammar correction modes. In deferred mode, errors are silently logged without interrupting conversation flow. Use when the student says "I want to practice fluency", "correct me later", "don\'t correct me now", or similar. Switch back to immediate when the student says "correct me now" or "switch to immediate correction".',
+    parameters: z.object({
+      mode: z.enum(['immediate', 'deferred']).describe('Correction mode: "immediate" corrects inline, "deferred" logs errors silently'),
+    }),
+    handler: async ({ mode }: { mode: CorrectionMode }) => {
+      sessionContext.setCorrectionMode(mode);
+
+      const basePrompt = sessionContext.getPersonalityPrompt();
+      if (basePrompt) {
+        const instructions = mode === 'deferred'
+          ? basePrompt + DEFERRED_CORRECTION_ADDENDUM
+          : basePrompt;
+
+        sessionContext.sendEvent({
+          type: 'session.update',
+          session: { instructions },
+        });
+      }
+
+      return {
+        mode,
+        message: mode === 'deferred'
+          ? 'Switched to deferred correction mode. Errors will be logged silently. Continue the conversation naturally without correcting mistakes inline. Use log_grammar_correction to log all errors you detect.'
+          : 'Switched to immediate correction mode. Correct grammar mistakes gently as they occur, and log each correction using log_grammar_correction.',
+      };
     },
   },
 });

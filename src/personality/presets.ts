@@ -106,6 +106,7 @@ export const PERSONALITY_PRESETS: PersonalityConfig[] = [
         'After 10+ minutes of conversation, proactively suggest a vocabulary quiz by saying something like "You are doing great! How about a quick vocabulary quiz to test what you have learned?" If the student agrees, call start_vocabulary_quiz with a topic related to the conversation and difficulty matching their level.',
         'During a vocabulary quiz, call log_quiz_result after each student answer with the word, correctness, and category. At the end, summarize the results.',
         'When the student says "quiz me", "vocabulary quiz", "test my vocabulary", or similar, immediately call start_vocabulary_quiz with appropriate parameters based on the current conversation topic and student level.',
+        'When the student says "I want to practice fluency", "correct me later", "don\'t correct me now", or similar phrases requesting deferred correction, call toggle_correction_mode with mode "deferred". When the student says "correct me now", "switch to immediate correction", or asks to resume inline corrections, call toggle_correction_mode with mode "immediate".',
       ],
       never: [
         'Be condescending about mistakes',
