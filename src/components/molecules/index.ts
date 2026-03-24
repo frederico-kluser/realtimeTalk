@@ -4,3 +4,4 @@ export { CostTokenDisplay } from './CostTokenDisplay';
 export { AudioVisualizer } from './AudioVisualizer';
 export { StatusMessage } from './StatusMessage';
 export { ContextModal } from './ContextModal';
+export { ProgressBadge } from './ProgressBadge';

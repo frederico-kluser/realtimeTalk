@@ -8,6 +8,7 @@ import { getRandomWords } from './data/vocabularyBank';
 import type { VocabTopic, VocabDifficulty } from './data/vocabularyBank';
 import { getRandomQuestions } from './data/grammarQuiz';
 import type { QuizTopic, QuizDifficulty } from './data/grammarQuiz';
+import { emitChallenge } from '@/core/events/challengeEvents';
 import { getDebateTopics, findDebateTopic, getRandomDebateTopic } from './data/debateTopics';
 import { sessionContext } from './sessionContext';
 import type { CorrectionMode } from './sessionContext';
@@ -95,8 +96,8 @@ export const appActions = createActionRegistry({
 
       // Track seen expressions to avoid repetition
       const seen = JSON.parse(localStorage.getItem('seen_expressions') ?? '[]') as string[];
-      if (!seen.includes(expression.expression)) {
-        localStorage.setItem('seen_expressions', JSON.stringify([...seen, expression.expression]));
+      if (!seen.includes(expression!.expression)) {
+        localStorage.setItem('seen_expressions', JSON.stringify([...seen, expression!.expression]));
       }
 
       localStorage.setItem('daily_expression_date', today);
@@ -214,8 +215,17 @@ export const appActions = createActionRegistry({
       };
 
       const focusArea = focus ?? 'general';
-      const pool = phrases[difficulty][focusArea];
-      const phrase = pool[Math.floor(Math.random() * pool.length)];
+      const pool = phrases[difficulty]![focusArea]!;
+      const phrase = pool![Math.floor(Math.random() * pool!.length)];
+
+      // Emit pronunciation challenge card
+      emitChallenge({
+        id: `pron-${Date.now()}`,
+        type: 'pronunciation',
+        question: 'Repeat this phrase out loud:',
+        targetText: phrase,
+        hint: `Focus: ${focusArea} — ${difficulty}`,
+      });
 
       return {
         phrase,
@@ -559,6 +569,17 @@ export const appActions = createActionRegistry({
         })),
       ].sort(() => Math.random() - 0.5);
 
+      // Emit vocabulary challenge card for the first word
+      if (quizWords.length > 0) {
+        const first = quizWords[0]!;
+        emitChallenge({
+          id: `vocab-${Date.now()}`,
+          type: 'vocabulary',
+          question: `What does "${first.word}" mean?`,
+          hint: `Word 1 of ${quizWords.length} — ${topic} (${difficulty})`,
+        });
+      }
+
       return {
         topic,
         difficulty,
@@ -591,6 +612,19 @@ export const appActions = createActionRegistry({
       difficulty: QuizDifficulty;
     }) => {
       const questions = getRandomQuestions(topic, difficulty, count);
+
+      // Emit the first question as an interactive challenge card
+      if (questions.length > 0) {
+        const first = questions[0]!;
+        emitChallenge({
+          id: `mc-${Date.now()}`,
+          type: 'multiple_choice',
+          question: first.question,
+          options: [...first.options],
+          correctIndex: first.correct_index,
+          hint: `Question 1 of ${questions.length} — ${topic}`,
+        });
+      }
 
       return {
         topic,
@@ -670,9 +704,20 @@ export const appActions = createActionRegistry({
         ],
       };
 
-      const pool = phrases[difficulty];
+      const pool = phrases[difficulty]!;
       const shuffled = [...pool].sort(() => Math.random() - 0.5);
-      const selected = shuffled.slice(0, Math.min(count, pool.length));
+      const selected = shuffled.slice(0, Math.min(count, pool!.length));
+
+      // Emit dictation challenge card for the first phrase
+      if (selected.length > 0) {
+        emitChallenge({
+          id: `dict-${Date.now()}`,
+          type: 'dictation',
+          question: 'Listen carefully and repeat:',
+          targetText: selected[0],
+          hint: `Phrase 1 of ${selected.length} — ${difficulty}`,
+        });
+      }
 
       return {
         difficulty,
@@ -1059,6 +1104,18 @@ export const appActions = createActionRegistry({
         };
       }
 
+      // Emit flashcard challenge for the first card
+      if (dueCards.length > 0) {
+        const first = dueCards[0]!;
+        emitChallenge({
+          id: `fc-${Date.now()}`,
+          type: 'flashcard',
+          question: `What does "${first.word}" mean?`,
+          hint: `Card 1 of ${dueCards.length} — Review session`,
+          metadata: { translation: first.translation, context: first.context },
+        });
+      }
+
       return {
         cards: dueCards.map((c) => ({
           word: c.word,
@@ -1431,7 +1488,6 @@ export const appActions = createActionRegistry({
       const streak = gamData?.streak ?? 0;
       const totalSessions = allSessions.filter(s => s.durationMs >= 300000).length;
       const totalFlashcards = allFlashcards.length;
-      const totalVocabQuizzes = allVocab.length;
       const correctVocab = allVocab.filter(v => v.correct).length;
       const totalCorrections = allCorrections.length;
       const hasRoleplay = allSessions.some(s => s.actionsTriggered.includes('start_roleplay'));
