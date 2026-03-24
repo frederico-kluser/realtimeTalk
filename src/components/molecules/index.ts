@@ -4,3 +4,6 @@ export { CostTokenDisplay } from './CostTokenDisplay';
 export { AudioVisualizer } from './AudioVisualizer';
 export { StatusMessage } from './StatusMessage';
 export { ContextModal } from './ContextModal';
+export { ProgressRing } from './ProgressRing';
+export { StreakBadge } from './StreakBadge';
+export { QuizCard } from './QuizCard';

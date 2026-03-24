@@ -13,3 +13,6 @@ export {
   PersonalityFormDeflectionsSection,
   PersonalityFormFileContextSection,
 } from './PersonalityForm';
+export { TeacherSidebar } from './TeacherSidebar';
+export { TeacherQuickActions } from './TeacherQuickActions';
+export { TeacherOnboarding } from './TeacherOnboarding';

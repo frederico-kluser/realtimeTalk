@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { I18nProvider } from '@/i18n';
+import { TeacherPage } from '@/components/pages/TeacherPage';
 import { ConversationPage } from '@/components/pages/ConversationPage';
 import { SettingsPage } from '@/components/pages/SettingsPage';
 import { HistoryPage } from '@/components/pages/HistoryPage';
@@ -11,7 +12,8 @@ export function App() {
     <I18nProvider>
       <BrowserRouter>
         <Routes>
-          <Route path="/" element={<ConversationPage />} />
+          <Route path="/" element={<TeacherPage />} />
+          <Route path="/conversation" element={<ConversationPage />} />
           <Route path="/settings" element={<SettingsPage />} />
           <Route path="/history" element={<HistoryPage />} />
           <Route path="/personality/:id?" element={<PersonalityEditorPage />} />
