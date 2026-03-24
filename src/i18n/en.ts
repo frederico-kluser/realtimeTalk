@@ -200,6 +200,11 @@ export const en = {
   teacherAction_flashcards: 'Flashcards',
   teacherAction_debate: 'Debate',
 
+  // Teacher Speech Detection
+  teacherSpeechDetection: 'Speech Detection',
+  teacherSpeechDetectionDesc: 'Controls how sensitively the AI detects your speech. Lower sensitivity reduces false interruptions when you are silent.',
+  teacherExerciseModeActive: 'Exercise mode — AI interruption disabled to prevent false triggers',
+
   // Teacher Quick Action Commands
   teacherQuiz: 'Start a vocabulary quiz',
   teacherRoleplay: 'Let\'s do a roleplay scenario',

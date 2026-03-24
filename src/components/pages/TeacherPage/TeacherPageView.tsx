@@ -16,6 +16,8 @@ export function TeacherPageView(props: TeacherViewProps) {
   const {
     voice,
     setVoice,
+    vadEagerness,
+    setVadEagerness,
     transcript,
     totalCost,
     totalTokens,
@@ -33,6 +35,7 @@ export function TeacherPageView(props: TeacherViewProps) {
     studentLevel,
     studentStreak,
     studentPoints,
+    exerciseActive,
   } = props;
 
   return (
@@ -92,7 +95,12 @@ export function TeacherPageView(props: TeacherViewProps) {
 
       <AnimatePresence>
         {showSettings && (
-          <TeacherSettingsDrawer onClose={() => setShowSettings(false)} />
+          <TeacherSettingsDrawer
+            onClose={() => setShowSettings(false)}
+            vadEagerness={vadEagerness}
+            onVadEagernessChange={setVadEagerness}
+            exerciseActive={exerciseActive}
+          />
         )}
       </AnimatePresence>
     </PageLayout>

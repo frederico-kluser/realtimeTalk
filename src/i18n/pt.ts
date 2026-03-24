@@ -202,6 +202,11 @@ export const pt: Translations = {
   teacherAction_flashcards: 'Flashcards',
   teacherAction_debate: 'Debate',
 
+  // Teacher Speech Detection
+  teacherSpeechDetection: 'Detecção de Fala',
+  teacherSpeechDetectionDesc: 'Controla a sensibilidade com que a IA detecta sua fala. Sensibilidade mais baixa reduz interrupções falsas quando você está em silêncio.',
+  teacherExerciseModeActive: 'Modo exercício — interrupção da IA desativada para evitar falsos positivos',
+
   // Teacher Quick Action Commands
   teacherQuiz: 'Começar um quiz de vocabulário',
   teacherRoleplay: 'Vamos fazer uma simulação',

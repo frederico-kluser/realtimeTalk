@@ -2,17 +2,24 @@ import { useState, useCallback } from 'react';
 import { motion } from 'motion/react';
 import { Input } from '@/components/atoms/Input';
 import { Button } from '@/components/atoms/Button';
+import { Select } from '@/components/atoms/Select';
+import { Label } from '@/components/atoms/Label';
 import { SectionTitle } from '@/components/atoms/SectionTitle';
+import { HelpTooltip } from '@/components/atoms/HelpTooltip';
 import { XIcon } from '@/components/atoms/icons';
 import { LanguageSelector } from '@/components/atoms/LanguageSelector';
 import { useT } from '@/i18n';
 import { apiKeyManager } from '@/storage/keyManager';
+import type { VADEagerness } from '@/core/types/realtime';
 
 interface TeacherSettingsDrawerProps {
   onClose: () => void;
+  vadEagerness: VADEagerness;
+  onVadEagernessChange: (v: VADEagerness) => void;
+  exerciseActive: boolean;
 }
 
-export function TeacherSettingsDrawer({ onClose }: TeacherSettingsDrawerProps) {
+export function TeacherSettingsDrawer({ onClose, vadEagerness, onVadEagernessChange, exerciseActive }: TeacherSettingsDrawerProps) {
   const t = useT();
   const [apiKey, setApiKey] = useState(apiKeyManager.hasKey() ? '••••••••' : '');
   const [passphrase, setPassphrase] = useState('');
@@ -135,6 +142,34 @@ export function TeacherSettingsDrawer({ onClose }: TeacherSettingsDrawerProps) {
           <section className="space-y-3">
             <SectionTitle uppercase>{t.language}</SectionTitle>
             <LanguageSelector />
+          </section>
+
+          {/* Speech Detection */}
+          <section className="space-y-3">
+            <SectionTitle uppercase>{t.teacherSpeechDetection}</SectionTitle>
+            <p className="text-xs text-gray-500 dark:text-gray-400">{t.teacherSpeechDetectionDesc}</p>
+            <div>
+              <div className="flex items-center gap-1 mb-1">
+                <Label>{t.vad}</Label>
+                <HelpTooltip text={t.helpVad} />
+              </div>
+              <Select
+                value={vadEagerness}
+                onChange={(e) => onVadEagernessChange(e.target.value as VADEagerness)}
+                options={[
+                  { value: 'low', label: t.vadLow },
+                  { value: 'medium', label: t.vadMedium },
+                  { value: 'high', label: t.vadHigh },
+                  { value: 'auto', label: t.vadAuto },
+                ]}
+              />
+            </div>
+            {exerciseActive && (
+              <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-800">
+                <span className="inline-block w-2 h-2 bg-indigo-500 rounded-full animate-pulse" />
+                <span className="text-xs text-indigo-700 dark:text-indigo-300">{t.teacherExerciseModeActive}</span>
+              </div>
+            )}
           </section>
         </div>
       </motion.div>

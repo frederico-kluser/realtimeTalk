@@ -19,6 +19,7 @@ import { getDB } from '@/storage/idb';
 import { estimateCost } from '@/utils/costEstimator';
 import { apiKeyManager } from '@/storage/keyManager';
 import { sessionContext } from '@/actions/sessionContext';
+import { detectExerciseActive } from '@/utils/exerciseDetector';
 
 const SOFIA_PERSONALITY = PERSONALITY_PRESETS.find((p) => p.id === 'language-tutor')!;
 const TUTORIAL_STORAGE_KEY = 'teacher_tutorial_completed';
@@ -26,7 +27,7 @@ const TUTORIAL_STORAGE_KEY = 'teacher_tutorial_completed';
 export function useTeacherController() {
   const [model] = useState<RealtimeModel>('gpt-realtime-mini');
   const [voice, setVoice] = useState<RealtimeVoice>(SOFIA_PERSONALITY.voice.model_voice as RealtimeVoice);
-  const [vadEagerness] = useState<VADEagerness>('medium');
+  const [vadEagerness, setVadEagerness] = useState<VADEagerness>('low');
   const [transcript, setTranscript] = useState<TranscriptEntry[]>([]);
   const [totalCost, setTotalCost] = useState(0);
   const [totalTokens, setTotalTokens] = useState(0);
@@ -40,10 +41,13 @@ export function useTeacherController() {
   const [studentStreak, setStudentStreak] = useState(0);
   const [studentPoints, setStudentPoints] = useState(0);
 
+  const [exerciseActive, setExerciseActive] = useState(false);
+
   const location = useLocation();
   const sessionStartRef = useRef<string>(new Date().toISOString());
   const sessionIdRef = useRef<string>(crypto.randomUUID());
   const resumeHandledRef = useRef(false);
+  const prevExerciseActiveRef = useRef(false);
 
   // Load student profile on mount
   useEffect(() => {
@@ -115,7 +119,7 @@ export function useTeacherController() {
         type: 'semantic_vad',
         eagerness: vadEagerness,
         create_response: true,
-        interrupt_response: true,
+        interrupt_response: false,
       },
     },
     onEvent: handleEvent,
@@ -127,6 +131,50 @@ export function useTeacherController() {
   const actionHandlers = useActionRegistry(appActions, session);
   const personality = usePersonality(session);
   const memory = useMemory();
+
+  // Detect exercise mode from transcript to adjust VAD
+  useEffect(() => {
+    const isExercise = detectExerciseActive(transcript);
+    setExerciseActive(isExercise);
+  }, [transcript]);
+
+  // Auto-adjust interrupt_response when exercise state changes
+  useEffect(() => {
+    if (prevExerciseActiveRef.current === exerciseActive) return;
+    prevExerciseActiveRef.current = exerciseActive;
+
+    if (session.status === 'idle' || session.status === 'disconnected') return;
+
+    session.sendEvent({
+      type: 'session.update',
+      session: {
+        turn_detection: {
+          type: 'semantic_vad',
+          eagerness: exerciseActive ? 'low' : vadEagerness,
+          create_response: true,
+          interrupt_response: !exerciseActive,
+        },
+      },
+    });
+  }, [exerciseActive, session, vadEagerness]);
+
+  // Update VAD mid-session when eagerness changes
+  useEffect(() => {
+    if (session.status === 'idle' || session.status === 'disconnected') return;
+
+    session.sendEvent({
+      type: 'session.update',
+      session: {
+        turn_detection: {
+          type: 'semantic_vad',
+          eagerness: exerciseActive ? 'low' : vadEagerness,
+          create_response: true,
+          interrupt_response: !exerciseActive,
+        },
+      },
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [vadEagerness]);
 
   const handleToggleMute = useCallback(() => {
     audioControls.toggleMute();
@@ -335,6 +383,8 @@ export function useTeacherController() {
   return {
     voice,
     setVoice,
+    vadEagerness,
+    setVadEagerness,
     transcript,
     totalCost,
     totalTokens,
@@ -353,5 +403,6 @@ export function useTeacherController() {
     studentLevel,
     studentStreak,
     studentPoints,
+    exerciseActive,
   };
 }
