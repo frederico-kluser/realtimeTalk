@@ -176,4 +176,42 @@ export const pt: Translations = {
   // Language selector
   languageEnglish: 'English',
   languagePortuguese: 'Português',
+
+  // Teacher Interface
+  teacherTitle: 'Tutor de Ingles',
+  teacherVoiceLabel: 'Voz da Sofia',
+  teacherVoiceHelp: 'Escolha a voz da Sofia, sua tutora de ingles. Cada voz tem um carater e tom unicos.',
+
+  // Tutorial
+  tutorialWelcome: 'Bem-vindo ao Tutor de Ingles',
+  tutorialSubtitle: 'Aprenda ingles com Sofia, sua tutora de voz com IA',
+  tutorialNext: 'Proximo',
+  tutorialStart: 'Comecar',
+  tutorialStep1Title: 'Aprendizado Personalizado',
+  tutorialStep1Desc: 'Sofia se adapta ao seu nivel. Ela comeca com uma avaliacao rapida e personaliza cada licao para suas necessidades — do iniciante ao avancado.',
+  tutorialStep2Title: 'Conversas por Voz Reais',
+  tutorialStep2Desc: 'Pratique falar ingles naturalmente. Sofia ouve sua voz, corrige sua gramatica e ajuda a melhorar a pronuncia em tempo real.',
+  tutorialStep3Title: 'Desafios Interativos',
+  tutorialStep3Desc: 'Quizzes de vocabulario, exercicios de gramatica, cenarios de roleplay, ditado e debates — tudo por interacao de voz. Aprenda fazendo!',
+  tutorialStep4Title: 'Acompanhe seu Progresso',
+  tutorialStep4Desc: 'Seu nivel, sequencia e conquistas sao rastreados automaticamente. Sofia lembra seus pontos fortes e fracos entre sessoes.',
+
+  // Activities
+  chooseActivity: 'Escolha uma atividade',
+  actFreeConversation: 'Conversa Livre',
+  actFreeConversationDesc: 'Converse livremente com Sofia sobre qualquer assunto. Ela corrigira seus erros e expandira seu vocabulario naturalmente.',
+  actVocabularyQuiz: 'Quiz de Vocabulario',
+  actVocabularyQuizDesc: 'Teste seu conhecimento de palavras com quizzes por voz sobre temas como comida, viagem, negocios e mais.',
+  actGrammarQuiz: 'Quiz de Gramatica',
+  actGrammarQuizDesc: 'Perguntas de multipla escolha de gramatica. Responda A, B, C ou D por voz e receba explicacoes instantaneas.',
+  actRoleplay: 'Cenario de Roleplay',
+  actRoleplayDesc: 'Pratique situacoes reais: restaurantes, aeroportos, entrevistas de emprego, consultas medicas e mais.',
+  actPronunciation: 'Pratica de Pronuncia',
+  actPronunciationDesc: 'Repita apos Sofia e receba feedback sobre sua pronuncia. Foco em vogais, consoantes ou entonacao.',
+  actDictation: 'Ditado',
+  actDictationDesc: 'Ouca com atencao e repita o que Sofia diz. Otimo para melhorar a compreensao auditiva.',
+  actImmersion: 'Modo Imersao',
+  actImmersionDesc: 'Sofia fala apenas em ingles. Imersao total — sem traducoes, apenas pratica pura.',
+  actDebate: 'Pratica de Debate',
+  actDebateDesc: 'Argumente uma posicao sobre temas interessantes. Pratique vocabulario de argumentacao e conectivos.',
 };

@@ -174,6 +174,44 @@ export const en = {
   // Language selector
   languageEnglish: 'English',
   languagePortuguese: 'Português',
+
+  // Teacher Interface
+  teacherTitle: 'English Tutor',
+  teacherVoiceLabel: 'Sofia\'s Voice',
+  teacherVoiceHelp: 'Choose the voice for Sofia, your English tutor. Each voice has a unique character and tone.',
+
+  // Tutorial
+  tutorialWelcome: 'Welcome to English Tutor',
+  tutorialSubtitle: 'Learn English with Sofia, your AI-powered voice tutor',
+  tutorialNext: 'Next',
+  tutorialStart: 'Get Started',
+  tutorialStep1Title: 'Personalized Learning',
+  tutorialStep1Desc: 'Sofia adapts to your level. She\'ll start with a quick assessment and tailor every lesson to your needs — from beginner to advanced.',
+  tutorialStep2Title: 'Real Voice Conversations',
+  tutorialStep2Desc: 'Practice speaking English naturally. Sofia listens to your voice, corrects your grammar, and helps you improve pronunciation in real time.',
+  tutorialStep3Title: 'Interactive Challenges',
+  tutorialStep3Desc: 'Vocabulary quizzes, grammar exercises, roleplay scenarios, dictation, and debates — all through voice interaction. Learn by doing!',
+  tutorialStep4Title: 'Track Your Progress',
+  tutorialStep4Desc: 'Your level, streak, and achievements are tracked automatically. Sofia remembers your strengths and weak points across sessions.',
+
+  // Activities
+  chooseActivity: 'Choose an activity',
+  actFreeConversation: 'Free Conversation',
+  actFreeConversationDesc: 'Chat freely with Sofia about any topic. She\'ll correct your mistakes and expand your vocabulary naturally.',
+  actVocabularyQuiz: 'Vocabulary Quiz',
+  actVocabularyQuizDesc: 'Test your word knowledge with voice-based quizzes on topics like food, travel, business, and more.',
+  actGrammarQuiz: 'Grammar Quiz',
+  actGrammarQuizDesc: 'Multiple choice grammar questions. Answer A, B, C, or D by voice and get instant explanations.',
+  actRoleplay: 'Roleplay Scenario',
+  actRoleplayDesc: 'Practice real-world situations: restaurants, airports, job interviews, doctor visits, and more.',
+  actPronunciation: 'Pronunciation Practice',
+  actPronunciationDesc: 'Repeat after Sofia and get feedback on your pronunciation. Focus on vowels, consonants, or intonation.',
+  actDictation: 'Dictation',
+  actDictationDesc: 'Listen carefully and repeat what Sofia says. Great for improving listening comprehension.',
+  actImmersion: 'Immersion Mode',
+  actImmersionDesc: 'Sofia speaks only in English. Full immersion — no translations, just pure practice.',
+  actDebate: 'Debate Practice',
+  actDebateDesc: 'Argue a position on interesting topics. Practice argumentation vocabulary and connecting phrases.',
 };
 
 export type Translations = typeof en;
