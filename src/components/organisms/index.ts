@@ -13,3 +13,9 @@ export {
   PersonalityFormDeflectionsSection,
   PersonalityFormFileContextSection,
 } from './PersonalityForm';
+export { TeacherHeader } from './TeacherHeader';
+export { QuickActionsBar } from './QuickActionsBar';
+export { ChallengePanel } from './ChallengePanel';
+export { TutorialOverlay } from './TutorialOverlay';
+export { WelcomeScreen } from './WelcomeScreen';
+export { TeacherSettingsDrawer } from './TeacherSettingsDrawer';

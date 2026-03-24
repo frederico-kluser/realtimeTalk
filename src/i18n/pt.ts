@@ -176,4 +176,49 @@ export const pt: Translations = {
   // Language selector
   languageEnglish: 'English',
   languagePortuguese: 'Português',
+
+  // Teacher Page
+  teacherWelcome: 'Olá! Sou a Sofia, sua tutora de inglês',
+  teacherWelcomeDesc: 'Pratique inglês através de conversas por voz em tempo real. Vou me adaptar ao seu nível e ajudá-lo a melhorar passo a passo.',
+  teacherChooseActivity: 'O que você gostaria de praticar?',
+  teacherYourLevel: 'Seu nível',
+  teacherDayStreak: 'dias seguidos',
+  teacherActivities: 'Atividades',
+  teacherSelectAnswer: 'Toque sua resposta:',
+  teacherRepeatPhrase: 'Repita esta frase:',
+  teacherSpeakNow: 'Fale agora no microfone...',
+  teacherDictationActive: 'Ditado em andamento',
+  teacherListening: 'Ouvindo...',
+  teacherSkipTutorial: 'Pular',
+  teacherNext: 'Próximo',
+  teacherGetStarted: 'Começar',
+
+  // Teacher Actions
+  teacherAction_free: 'Conversa Livre',
+  teacherAction_quiz: 'Quiz de Vocabulário',
+  teacherAction_roleplay: 'Simulação',
+  teacherAction_pronunciation: 'Pronúncia',
+  teacherAction_dictation: 'Ditado',
+  teacherAction_flashcards: 'Flashcards',
+  teacherAction_debate: 'Debate',
+
+  // Teacher Quick Action Commands
+  teacherQuiz: 'Começar um quiz de vocabulário',
+  teacherRoleplay: 'Vamos fazer uma simulação',
+  teacherPronunciation: 'Quero praticar pronúncia',
+  teacherDictation: 'Vamos fazer um exercício de ditado',
+  teacherFlashcards: 'Vamos revisar meus flashcards',
+  teacherDebate: 'Vamos ter um debate',
+
+  // Tutorial Steps
+  tutorialStep1Title: 'Bem-vindo à Sofia English Tutor!',
+  tutorialStep1Desc: 'Sofia é sua tutora de inglês com IA. Ela vai ajudá-lo a praticar fala, melhorar gramática, expandir vocabulário e construir confiança — tudo através de conversas naturais por voz.',
+  tutorialStep2Title: 'Configure sua Chave API',
+  tutorialStep2Desc: 'Clique no ícone de configurações (engrenagem) para inserir sua chave API da OpenAI. Sua chave fica no navegador e nunca é enviada para nenhum servidor além da OpenAI.',
+  tutorialStep3Title: 'Escolha uma Atividade',
+  tutorialStep3Desc: 'Inicie uma conversa livre ou escolha uma atividade específica: quizzes de vocabulário, simulações, exercícios de pronúncia, ditado, flashcards ou debates.',
+  tutorialStep4Title: 'Desafios Interativos',
+  tutorialStep4Desc: 'Durante os quizzes, botões de resposta aparecerão na tela. Você pode tocá-los ou responder por voz — o que for mais natural!',
+  tutorialStep5Title: 'Acompanhe seu Progresso',
+  tutorialStep5Desc: 'Sofia lembra seu nível, acompanha sua sequência de dias e dá pontos. Seu progresso é salvo automaticamente entre sessões. Vamos começar a aprender!',
 };

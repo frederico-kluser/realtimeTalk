@@ -91,11 +91,11 @@ export const appActions = createActionRegistry({
         hash = (hash * 31 + today.charCodeAt(i)) | 0;
       }
       const index = Math.abs(hash) % EXPRESSIONS.length;
-      const expression = EXPRESSIONS[index];
+      const expression = EXPRESSIONS[index]!;
 
       // Track seen expressions to avoid repetition
       const seen = JSON.parse(localStorage.getItem('seen_expressions') ?? '[]') as string[];
-      if (!seen.includes(expression.expression)) {
+      if (expression && !seen.includes(expression.expression)) {
         localStorage.setItem('seen_expressions', JSON.stringify([...seen, expression.expression]));
       }
 
@@ -214,7 +214,7 @@ export const appActions = createActionRegistry({
       };
 
       const focusArea = focus ?? 'general';
-      const pool = phrases[difficulty][focusArea];
+      const pool = phrases[difficulty]?.[focusArea] ?? phrases[difficulty]?.['general'] ?? ['Hello'];
       const phrase = pool[Math.floor(Math.random() * pool.length)];
 
       return {
@@ -670,7 +670,7 @@ export const appActions = createActionRegistry({
         ],
       };
 
-      const pool = phrases[difficulty];
+      const pool = phrases[difficulty]!;
       const shuffled = [...pool].sort(() => Math.random() - 0.5);
       const selected = shuffled.slice(0, Math.min(count, pool.length));
 
@@ -1431,7 +1431,6 @@ export const appActions = createActionRegistry({
       const streak = gamData?.streak ?? 0;
       const totalSessions = allSessions.filter(s => s.durationMs >= 300000).length;
       const totalFlashcards = allFlashcards.length;
-      const totalVocabQuizzes = allVocab.length;
       const correctVocab = allVocab.filter(v => v.correct).length;
       const totalCorrections = allCorrections.length;
       const hasRoleplay = allSessions.some(s => s.actionsTriggered.includes('start_roleplay'));
