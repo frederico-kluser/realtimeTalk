@@ -137,6 +137,18 @@ export const appActions = createActionRegistry({
     },
   },
 
+  end_exercise: {
+    description: 'End the current exercise (quiz, dictation, pronunciation, placement test) and restore normal speech detection. Call this when an exercise session is complete and you are returning to free conversation.',
+    type: 'background' as const,
+    parameters: z.object({
+      exercise_type: z.string().describe('The type of exercise that just ended'),
+    }),
+    handler: async ({ exercise_type }: { exercise_type: string }) => {
+      sessionContext.endExercise();
+      return { ended: true, exercise_type };
+    },
+  },
+
   pronunciation_exercise: {
     description: 'Start a pronunciation exercise. Returns a phrase for the student to repeat aloud. After the student speaks, call evaluate_pronunciation with the expected and spoken text.',
     parameters: z.object({
@@ -144,6 +156,8 @@ export const appActions = createActionRegistry({
       focus: z.enum(['vowels', 'consonants', 'intonation', 'general']).optional().describe('Phonetic focus area'),
     }),
     handler: async ({ difficulty, focus }: { difficulty: 'beginner' | 'intermediate' | 'advanced'; focus?: 'vowels' | 'consonants' | 'intonation' | 'general' }) => {
+      sessionContext.startExercise('pronunciation');
+
       const phrases: Record<string, Record<string, string[]>> = {
         beginner: {
           vowels: [
@@ -233,6 +247,8 @@ export const appActions = createActionRegistry({
       spoken: z.string().describe('The transcribed text of what the student actually said'),
     }),
     handler: async ({ expected, spoken }: { expected: string; spoken: string }) => {
+      sessionContext.endExercise();
+
       const score = similarityScore(expected, spoken);
       const problematicWords = findDifferences(expected, spoken);
 
@@ -306,6 +322,8 @@ export const appActions = createActionRegistry({
       target_language: z.string().describe('The language the student is learning, e.g. "English", "Spanish"'),
     }),
     handler: async ({ target_language }: { target_language: string }) => {
+      sessionContext.startExercise('placement_test');
+
       return {
         target_language,
         instructions: 'Conduct a conversational placement test following the criteria below. Ask 8-12 questions with increasing difficulty. After the test, call save_student_level with the determined level and scores.',
@@ -367,6 +385,9 @@ export const appActions = createActionRegistry({
       level: 'A1' | 'A2' | 'B1' | 'B2' | 'C1' | 'C2';
       scores: { vocabulary: number; grammar: number; comprehension: number; fluency: number };
     }) => {
+      // Placement test is done — restore normal VAD
+      sessionContext.endExercise();
+
       const scoreValues = [scores.vocabulary, scores.grammar, scores.comprehension, scores.fluency];
       const avgScore = scoreValues.reduce((a, b) => a + b, 0) / scoreValues.length;
       const now = new Date().toISOString();
@@ -516,6 +537,8 @@ export const appActions = createActionRegistry({
       difficulty: VocabDifficulty;
       count: number;
     }) => {
+      sessionContext.startExercise('vocabulary_quiz');
+
       const db = await getDB();
       const allVocab = await db.getAll('vocabulary');
 
@@ -573,6 +596,7 @@ export const appActions = createActionRegistry({
           'After the student responds, immediately call log_quiz_result with the word, whether it was correct, and the category.',
           'Give brief feedback after each answer: confirm correct answers, gently correct wrong ones with the right answer and an example.',
           'At the end, summarize the results: total correct, total wrong, and words to review.',
+          'After summarizing results, call end_exercise with exercise_type="vocabulary_quiz" to restore normal speech detection.',
         ],
       };
     },
@@ -590,6 +614,8 @@ export const appActions = createActionRegistry({
       count: number;
       difficulty: QuizDifficulty;
     }) => {
+      sessionContext.startExercise('multiple_choice_quiz');
+
       const questions = getRandomQuestions(topic, difficulty, count);
 
       return {
@@ -614,6 +640,7 @@ export const appActions = createActionRegistry({
           'If incorrect, reveal the correct answer and read the explanation.',
           'After each answer, call log_quiz_result with word=question text, correct=true/false, category=topic.',
           'At the end, summarize the results: total correct out of total questions.',
+          'After summarizing results, call end_exercise with exercise_type="multiple_choice_quiz" to restore normal speech detection.',
         ],
       };
     },
@@ -631,6 +658,7 @@ export const appActions = createActionRegistry({
       topic?: string;
       count: number;
     }) => {
+      sessionContext.startExercise('dictation');
       const phrases: Record<string, string[]> = {
         beginner: [
           'I like to eat breakfast every morning.',
@@ -698,6 +726,8 @@ export const appActions = createActionRegistry({
       spoken: z.string().describe('The transcribed text of what the student actually said'),
     }),
     handler: async ({ expected, spoken }: { expected: string; spoken: string }) => {
+      sessionContext.endExercise();
+
       const score = similarityScore(expected, spoken);
       const missedWords = findDifferences(expected, spoken);
 

@@ -158,6 +158,7 @@ export function useTeacherController() {
   useEffect(() => {
     if (session.status === 'connected') {
       sessionContext.setSendEvent(session.sendEvent);
+      sessionContext.setBaseVadEagerness(vadEagerness);
       personality.applyPersonality(SOFIA_PERSONALITY);
       void memory.loadAndInjectMemories(session.sendEvent);
       actionHandlers.syncTools();

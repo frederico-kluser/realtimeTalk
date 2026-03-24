@@ -13,7 +13,10 @@ export function usePersonality(session: RealtimeSessionHandle) {
     sessionContext.setPersonalityPrompt(prompt);
     session.sendEvent({
       type: 'session.update',
-      session: { instructions: prompt },
+      session: {
+        instructions: prompt,
+        voice: config.voice.model_voice,
+      },
     });
     setActive(config);
   }, [session]);

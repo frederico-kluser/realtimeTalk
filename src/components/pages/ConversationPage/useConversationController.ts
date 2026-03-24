@@ -120,6 +120,7 @@ export function useConversationController() {
   useEffect(() => {
     if (session.status === 'connected') {
       sessionContext.setSendEvent(session.sendEvent);
+      sessionContext.setBaseVadEagerness(vadEagerness);
       personality.applyPersonality(selectedPersonality);
       void memory.loadAndInjectMemories(session.sendEvent);
       actionHandlers.syncTools();
@@ -218,6 +219,7 @@ export function useConversationController() {
     const originalPersonality = allPersonalities.find((p) => p.id === sessionRecord.personalityId);
     if (originalPersonality) {
       setSelectedPersonality(originalPersonality);
+      setVoice(originalPersonality.voice.model_voice);
     }
 
     // Set model from original session
@@ -288,6 +290,11 @@ export function useConversationController() {
     memory,
   ]);
 
+  const handlePersonalityChange = useCallback((p: PersonalityConfig) => {
+    setSelectedPersonality(p);
+    setVoice(p.voice.model_voice);
+  }, []);
+
   const isActive =
     session.status !== 'idle' &&
     session.status !== 'disconnected' &&
@@ -304,7 +311,7 @@ export function useConversationController() {
     totalCost,
     totalTokens,
     selectedPersonality,
-    setSelectedPersonality,
+    handlePersonalityChange,
     showSettings,
     setShowSettings,
     showContextModal,

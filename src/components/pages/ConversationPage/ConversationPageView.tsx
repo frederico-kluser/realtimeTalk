@@ -28,7 +28,7 @@ export function ConversationPageView(props: ConversationViewProps) {
     totalCost,
     totalTokens,
     selectedPersonality,
-    setSelectedPersonality,
+    handlePersonalityChange,
     showSettings,
     setShowSettings,
     showContextModal,
@@ -100,7 +100,7 @@ export function ConversationPageView(props: ConversationViewProps) {
               vadEagerness={vadEagerness}
               onVadEagernessChange={setVadEagerness}
               selectedPersonality={selectedPersonality}
-              onPersonalityChange={setSelectedPersonality}
+              onPersonalityChange={handlePersonalityChange}
               isActive={isActive}
             />
           </motion.div>
