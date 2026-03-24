@@ -174,6 +174,51 @@ export const en = {
   // Language selector
   languageEnglish: 'English',
   languagePortuguese: 'Português',
+
+  // Teacher Page
+  teacherWelcome: 'Hi! I\'m Sofia, your English tutor',
+  teacherWelcomeDesc: 'Practice English through real-time voice conversations. I\'ll adapt to your level and help you improve step by step.',
+  teacherChooseActivity: 'What would you like to practice?',
+  teacherYourLevel: 'Your level',
+  teacherDayStreak: 'day streak',
+  teacherActivities: 'Activities',
+  teacherSelectAnswer: 'Tap your answer:',
+  teacherRepeatPhrase: 'Repeat this phrase:',
+  teacherSpeakNow: 'Speak now into your microphone...',
+  teacherDictationActive: 'Dictation in progress',
+  teacherListening: 'Listening...',
+  teacherSkipTutorial: 'Skip',
+  teacherNext: 'Next',
+  teacherGetStarted: 'Get Started',
+
+  // Teacher Actions
+  teacherAction_free: 'Free Talk',
+  teacherAction_quiz: 'Vocabulary Quiz',
+  teacherAction_roleplay: 'Roleplay',
+  teacherAction_pronunciation: 'Pronunciation',
+  teacherAction_dictation: 'Dictation',
+  teacherAction_flashcards: 'Flashcards',
+  teacherAction_debate: 'Debate',
+
+  // Teacher Quick Action Commands
+  teacherQuiz: 'Start a vocabulary quiz',
+  teacherRoleplay: 'Let\'s do a roleplay scenario',
+  teacherPronunciation: 'I want to practice pronunciation',
+  teacherDictation: 'Let\'s do a dictation exercise',
+  teacherFlashcards: 'Let\'s review my flashcards',
+  teacherDebate: 'Let\'s have a debate',
+
+  // Tutorial Steps
+  tutorialStep1Title: 'Welcome to Sofia English Tutor!',
+  tutorialStep1Desc: 'Sofia is your AI-powered English tutor. She\'ll help you practice speaking, improve grammar, expand vocabulary, and build confidence — all through natural voice conversations.',
+  tutorialStep2Title: 'Set Up Your API Key',
+  tutorialStep2Desc: 'Click the settings icon (gear) to enter your OpenAI API key. Your key stays in your browser and is never sent to any server other than OpenAI.',
+  tutorialStep3Title: 'Choose an Activity',
+  tutorialStep3Desc: 'Start a free conversation or pick a specific activity: vocabulary quizzes, roleplays, pronunciation drills, dictation, flashcards, or debates.',
+  tutorialStep4Title: 'Interactive Challenges',
+  tutorialStep4Desc: 'During quizzes, you\'ll see answer buttons appear on screen. You can tap them or answer by voice — whatever feels natural!',
+  tutorialStep5Title: 'Track Your Progress',
+  tutorialStep5Desc: 'Sofia remembers your level, tracks your streak, and awards points. Your progress is saved automatically between sessions. Let\'s start learning!',
 };
 
 export type Translations = typeof en;

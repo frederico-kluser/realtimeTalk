@@ -524,7 +524,7 @@ export const getRandomQuestions = (
   // Fisher-Yates shuffle
   for (let i = pool.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
-    [pool[i], pool[j]] = [pool[j], pool[i]];
+    [pool[i], pool[j]] = [pool[j]!, pool[i]!];
   }
 
   return pool.slice(0, Math.min(count, pool.length));
@@ -545,7 +545,7 @@ export const getRandomQuestionsMultiTopic = (
   // Shuffle combined and trim to exact count
   for (let i = all.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
-    [all[i], all[j]] = [all[j], all[i]];
+    [all[i], all[j]] = [all[j]!, all[i]!];
   }
 
   return all.slice(0, count);

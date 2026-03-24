@@ -47,15 +47,15 @@ export function levenshteinDistance(a: string, b: string): number {
     for (let j = 1; j <= shortLen; j++) {
       const cost = long[i - 1] === short[j - 1] ? 0 : 1;
       curr[j] = Math.min(
-        prev[j] + 1,       // deletion
-        curr[j - 1] + 1,   // insertion
-        prev[j - 1] + cost, // substitution
+        prev[j]! + 1,       // deletion
+        curr[j - 1]! + 1,   // insertion
+        prev[j - 1]! + cost, // substitution
       );
     }
     [prev, curr] = [curr, prev];
   }
 
-  return prev[shortLen];
+  return prev[shortLen]!;
 }
 
 /**
@@ -101,9 +101,9 @@ export function findDifferences(
   for (let i = 1; i <= m; i++) {
     for (let j = 1; j <= n; j++) {
       if (expectedWords[i - 1] === spokenWords[j - 1]) {
-        dp[i][j] = dp[i - 1][j - 1] + 1;
+        dp[i]![j] = dp[i - 1]![j - 1]! + 1;
       } else {
-        dp[i][j] = Math.max(dp[i - 1][j], dp[i][j - 1]);
+        dp[i]![j] = Math.max(dp[i - 1]![j]!, dp[i]![j - 1]!);
       }
     }
   }
@@ -117,7 +117,7 @@ export function findDifferences(
       matched.add(i - 1);
       i--;
       j--;
-    } else if (dp[i - 1][j] >= dp[i][j - 1]) {
+    } else if (dp[i - 1]![j]! >= dp[i]![j - 1]!) {
       i--;
     } else {
       j--;
