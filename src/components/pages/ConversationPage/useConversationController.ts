@@ -23,7 +23,7 @@ import { sessionContext } from '@/actions/sessionContext';
 
 export function useConversationController() {
   const [model, setModel] = useState<RealtimeModel>('gpt-realtime-mini');
-  const [voice, setVoice] = useState<RealtimeVoice>('marin');
+  const [voice, setVoice] = useState<RealtimeVoice>(PERSONALITY_PRESETS[0]!.voice.model_voice);
   const [vadEagerness, setVadEagerness] = useState<VADEagerness>('medium');
   const [transcript, setTranscript] = useState<TranscriptEntry[]>([]);
   const [totalCost, setTotalCost] = useState(0);
@@ -35,6 +35,11 @@ export function useConversationController() {
   const [showContextModal, setShowContextModal] = useState(false);
   const [pendingContext, setPendingContext] = useState<string>('');
   const [resumingSession, setResumingSession] = useState<SessionRecord | null>(null);
+
+  // Auto-sync voice when personality changes
+  useEffect(() => {
+    setVoice(selectedPersonality.voice.model_voice);
+  }, [selectedPersonality]);
 
   const location = useLocation();
   const sessionStartRef = useRef<string>(new Date().toISOString());
