@@ -4,11 +4,31 @@ Tarefas decompostas a partir de `docs/teacher-ideas.md`, seguindo principios de 
 
 Cada tarefa e autocontida — pode ser executada por um agente fresh sem contexto extra.
 
+## Status
+
+| Task | Nome | Status |
+|------|------|--------|
+| 1.1 | IndexedDB Stores + Student Profile | DONE |
+| 1.2 | Placement Test | DONE |
+| 1.3 | Correcao Gramatical com Log | DONE |
+| 1.4 | Palavra do Dia + Expressoes | DONE |
+| 2.1 | Quiz de Vocabulario por Voz | DONE |
+| 2.2 | Questionario Multipla Escolha | DONE |
+| 2.3 | Text Similarity + Pronuncia | DONE |
+| 2.4 | Ditado (Dictation Mode) | DONE |
+| 3.1 | Role-Play Situacional | DONE |
+| 3.2 | Modo Correcao Adiada | DONE |
+| 3.3 | Modo Imersao | DONE |
+| 3.4 | Modo Debate / Discussao | DONE |
+| 4.1 | Progresso Adaptativo | DONE |
+| 4.2 | Flashcards SRS | DONE |
+| 4.3 | Gamificacao | DONE |
+
 ---
 
 ## Fase 1 — Fundacao
 
-### Task 1.1: IndexedDB Stores + Student Profile
+### Task 1.1: IndexedDB Stores + Student Profile — DONE
 
 ```xml
 <task_prompt>
@@ -56,9 +76,11 @@ Cada tarefa e autocontida — pode ser executada por um agente fresh sem context
 </task_prompt>
 ```
 
+**Resultado:** 5 stores criadas em `src/storage/idb.ts` (student_profile, vocabulary, corrections, flashcards, gamification). Tipos exportados: StudentProfile, VocabularyEntry, CorrectionEntry, Flashcard, GamificationData, TutorReport. Campo tutorReport adicionado ao SessionRecord. Typecheck passa.
+
 ---
 
-### Task 1.2: Placement Test (Avaliacao de Nivel)
+### Task 1.2: Placement Test (Avaliacao de Nivel) — DONE
 
 ```xml
 <task_prompt>
@@ -108,9 +130,11 @@ Cada tarefa e autocontida — pode ser executada por um agente fresh sem context
 </task_prompt>
 ```
 
+**Resultado:** Actions `placement_test` (conversational) e `save_student_level` (background) criadas em `src/actions/appActions.ts`. Criterios CEFR A1-C2 retornados pelo handler. Nivel salvo no IndexedDB store student_profile e como fato na store memories para injecao futura. Regras adicionadas ao preset Language Tutor em `src/personality/presets.ts`. Typecheck passa.
+
 ---
 
-### Task 1.3: Correcao Gramatical com Log
+### Task 1.3: Correcao Gramatical com Log — DONE
 
 ```xml
 <task_prompt>
@@ -160,9 +184,11 @@ Cada tarefa e autocontida — pode ser executada por um agente fresh sem context
 </task_prompt>
 ```
 
+**Resultado:** Actions `log_grammar_correction` (background), `get_session_corrections` (conversational) e `generate_session_report` (conversational) criadas em `src/actions/appActions.ts`. Modulo `src/actions/sessionContext.ts` criado para gerenciar sessionId e tutorReport. Correcoes salvas no IndexedDB store corrections com indice by-session. Regra adicionada ao preset. Adaptacoes em `useMemory.ts` e `useConversationController.ts`. Typecheck passa.
+
 ---
 
-### Task 1.4: Palavra do Dia + Expressoes Idiomaticas
+### Task 1.4: Palavra do Dia + Expressoes Idiomaticas — DONE
 
 ```xml
 <task_prompt>
@@ -207,11 +233,13 @@ Cada tarefa e autocontida — pode ser executada por um agente fresh sem context
 </task_prompt>
 ```
 
+**Resultado:** Actions `get_daily_expression` (conversational) e `mark_expression_learned` (background) criadas em `src/actions/appActions.ts`. Banco de expressoes em `src/actions/data/expressions.ts` com 30+ expressoes por nivel. Selecao deterministica via hash da data. Tracking em localStorage. Regra adicionada ao preset. Typecheck passa.
+
 ---
 
 ## Fase 2 — Exercicios Interativos
 
-### Task 2.1: Quiz de Vocabulario por Voz
+### Task 2.1: Quiz de Vocabulario por Voz — DONE
 
 ```xml
 <task_prompt>
@@ -259,9 +287,11 @@ Cada tarefa e autocontida — pode ser executada por um agente fresh sem context
 </task_prompt>
 ```
 
+**Resultado:** Actions `start_vocabulary_quiz` (conversational) e `log_quiz_result` (background) criadas em `src/actions/appActions.ts`. Banco de vocabulario em `src/actions/data/vocabularyBank.ts` com palavras por tema e nivel. Handler busca palavras erradas do IndexedDB para repeticao espacada + novas do tema. Regra adicionada ao preset para propor quizzes proativamente. Typecheck passa.
+
 ---
 
-### Task 2.2: Questionario de Multipla Escolha
+### Task 2.2: Questionario de Multipla Escolha — DONE
 
 ```xml
 <task_prompt>
@@ -302,9 +332,11 @@ Cada tarefa e autocontida — pode ser executada por um agente fresh sem context
 </task_prompt>
 ```
 
+**Resultado:** Action `start_multiple_choice_quiz` (conversational) criada em `src/actions/appActions.ts`. Banco de questoes em `src/actions/data/grammarQuiz.ts` com 50+ questoes cobrindo grammar, vocabulary, idioms, prepositions e tenses por 3 niveis. Handler seleciona questoes aleatorias e retorna com opcoes A/B/C/D, letra correta e explicacao. Reutiliza `log_quiz_result` para tracking. Typecheck passa.
+
 ---
 
-### Task 2.3: Text Similarity Util + Exercicios de Pronuncia
+### Task 2.3: Text Similarity Util + Exercicios de Pronuncia — DONE
 
 ```xml
 <task_prompt>
@@ -348,9 +380,11 @@ Cada tarefa e autocontida — pode ser executada por um agente fresh sem context
 </task_prompt>
 ```
 
+**Resultado:** `src/utils/textSimilarity.ts` criado com funcoes puras: `levenshteinDistance`, `similarityScore` (0-1), `findDifferences` (palavras problematicas) e `normalizeText` (lowercase, sem pontuacao). Actions `pronunciation_exercise` (conversational), `evaluate_pronunciation` (conversational) e `log_pronunciation` (background) criadas em `src/actions/appActions.ts`. Frases por nivel e foco retornadas pelo handler. Regra adicionada ao preset. Typecheck passa.
+
 ---
 
-### Task 2.4: Ditado (Dictation Mode)
+### Task 2.4: Ditado (Dictation Mode) — DONE
 
 ```xml
 <task_prompt>
@@ -392,11 +426,13 @@ Cada tarefa e autocontida — pode ser executada por um agente fresh sem context
 </task_prompt>
 ```
 
+**Resultado:** Actions `start_dictation` (conversational) e `check_dictation` (conversational) criadas em `src/actions/appActions.ts`. Banco de 30 frases por nivel (beginner/intermediate/advanced) embutido no handler. `check_dictation` reutiliza `similarityScore` e `findDifferences` de `src/utils/textSimilarity.ts`. Retorna score, rating (perfect/excellent/good/fair/needs_practice), palavras perdidas e feedback contextual. Typecheck passa.
+
 ---
 
 ## Fase 3 — Experiencias Ricas
 
-### Task 3.1: Role-Play Situacional
+### Task 3.1: Role-Play Situacional — DONE
 
 ```xml
 <task_prompt>
@@ -441,9 +477,11 @@ Cada tarefa e autocontida — pode ser executada por um agente fresh sem context
 </task_prompt>
 ```
 
+**Resultado:** Actions `start_roleplay` (conversational) e `end_roleplay` (conversational) criadas em `src/actions/appActions.ts`. Banco de 8 cenarios em `src/personality/scenarios.ts` (restaurant, airport, hotel, job_interview, doctor_visit, shopping, phone_call, meeting) com vocabulario-alvo por nivel e frases-chave. Estado de roleplay gerenciado via `sessionContext`. Scorecard gerado ao final com rating, vocabulario usado e recomendacao. Regras adicionadas ao preset. Typecheck passa.
+
 ---
 
-### Task 3.2: Modo Correcao Adiada (Fluency First)
+### Task 3.2: Modo Correcao Adiada (Fluency First) — DONE
 
 ```xml
 <task_prompt>
@@ -487,9 +525,11 @@ Cada tarefa e autocontida — pode ser executada por um agente fresh sem context
 </task_prompt>
 ```
 
+**Resultado:** Action `toggle_correction_mode` (conversational) criada em `src/actions/appActions.ts`. Alterna entre modo immediate e deferred via `sessionContext.setCorrectionMode()`. No modo deferred, envia `session.update` com instrucoes adicionais para nao corrigir inline e apenas logar erros via `log_grammar_correction`. Funcoes `setSendEvent`, `setPersonalityPrompt` e `setCorrectionMode` adicionadas ao `sessionContext.ts`. Integrado com `useConversationController.ts` e `usePersonality.ts`. Regra adicionada ao preset. Typecheck passa.
+
 ---
 
-### Task 3.3: Modo Imersao
+### Task 3.3: Modo Imersao — DONE
 
 ```xml
 <task_prompt>
@@ -533,9 +573,11 @@ Cada tarefa e autocontida — pode ser executada por um agente fresh sem context
 </task_prompt>
 ```
 
+**Resultado:** Actions `toggle_immersion_mode` (conversational), `log_fluency_metric` (background) e `log_vocabulary_usage` (background) criadas em `src/actions/appActions.ts`. Immersion mode salva/remove estado em localStorage. Handler retorna instrucoes de imersao para injecao via session.update. Metricas de fluencia e vocabulario coletadas silenciosamente com limite de 200/500 entradas. Integrado com `useConversationController.ts` e `useActionRegistry.ts`. Regras adicionadas ao preset. Typecheck passa.
+
 ---
 
-### Task 3.4: Modo Debate / Discussao
+### Task 3.4: Modo Debate / Discussao — DONE
 
 ```xml
 <task_prompt>
@@ -578,11 +620,13 @@ Cada tarefa e autocontida — pode ser executada por um agente fresh sem context
 </task_prompt>
 ```
 
+**Resultado:** Action `start_debate` (conversational) criada em `src/actions/appActions.ts`. Banco de 15+ temas de debate em `src/actions/data/debateTopics.ts` com expressoes pro/contra, conectivos uteis e nivel de dificuldade. Handler faz busca fuzzy por topico, fallback para aleatorio, e atribui lados (student vs Sofia). Retorna expressoes-alvo para ambos os lados e instrucoes detalhadas para conduzir debate de 4-6 trocas com feedback final. Typecheck passa.
+
 ---
 
 ## Fase 4 — Meta-features
 
-### Task 4.1: Sistema de Progresso Adaptativo
+### Task 4.1: Sistema de Progresso Adaptativo — DONE
 
 ```xml
 <task_prompt>
@@ -629,9 +673,11 @@ Cada tarefa e autocontida — pode ser executada por um agente fresh sem context
 </task_prompt>
 ```
 
+**Resultado:** Actions `update_student_profile` (background) e `get_student_profile` (conversational) criadas em `src/actions/appActions.ts`. Handler agrega metricas no IndexedDB store student_profile: merge de vocabulario, media movel de scores (ultimas 10 sessoes), atualizacao automatica de nivel estimado. Perfil injetado no contexto ao iniciar sessao via `useMemory.ts` com template de nivel/foco. Regras adaptativas adicionadas ao preset (A1-A2/B1-B2/C1-C2). Typecheck passa.
+
 ---
 
-### Task 4.2: Flashcards com Repeticao Espacada (SRS)
+### Task 4.2: Flashcards com Repeticao Espacada (SRS) — DONE
 
 ```xml
 <task_prompt>
@@ -678,9 +724,11 @@ Cada tarefa e autocontida — pode ser executada por um agente fresh sem context
 </task_prompt>
 ```
 
+**Resultado:** `src/utils/srs.ts` criado com algoritmo SM-2 simplificado: `calculateNextReview(correct, currentInterval, easeFactor)` retorna nextInterval, nextEaseFactor e nextReviewDate. Intervalo min 1 dia, max 365 dias, ease factor min 1.3. Actions `flashcard_session` (conversational), `update_flashcard` (background) e `add_flashcard` (background) criadas em `src/actions/appActions.ts`. Handler busca cards pendentes (next_review <= now) do IndexedDB store flashcards. Sofia chama add_flashcard automaticamente ao ensinar vocabulario novo. Regras adicionadas ao preset. Typecheck passa.
+
 ---
 
-### Task 4.3: Gamificacao
+### Task 4.3: Gamificacao — DONE
 
 ```xml
 <task_prompt>
@@ -727,6 +775,8 @@ Cada tarefa e autocontida — pode ser executada por um agente fresh sem context
   </validation>
 </task_prompt>
 ```
+
+**Resultado:** Actions `award_points` (background), `check_streak` (conversational) e `get_achievements` (conversational) criadas em `src/actions/appActions.ts`. Tabela de pontuacao: sessao (+10), quiz perfeito (+25), primeiro roleplay (+15). Streak calculado a partir de sessoes >= 5min no IndexedDB com mensagens de milestone (3/5/7/14/30 dias). 12 conquistas definidas: First Steps, Getting Started, Dedicated Learner, Five Alive, Monthly Master, Quiz Master, Vocabulary Collector, Role Player, Debater, Level Up, Error Hunter, Century Club. Conquistas avaliadas dinamicamente a partir dos dados reais de todas as stores. Regras adicionadas ao preset para mencionar conquistas ocasionalmente. Typecheck passa.
 
 ---
 

@@ -7,7 +7,6 @@ import { usePersonality } from '@/hooks/usePersonality';
 import { useMemory } from '@/hooks/useMemory';
 import { appActions } from '@/actions/appActions';
 import { PERSONALITY_PRESETS } from '@/personality/presets';
-import type { PersonalityConfig } from '@/personality/types';
 import type {
   RealtimeModel,
   RealtimeVoice,
@@ -20,31 +19,69 @@ import { getDB } from '@/storage/idb';
 import { estimateCost } from '@/utils/costEstimator';
 import { apiKeyManager } from '@/storage/keyManager';
 import { sessionContext } from '@/actions/sessionContext';
+import { detectExerciseActive } from '@/utils/exerciseDetector';
 
-export function useConversationController() {
-  const [model, setModel] = useState<RealtimeModel>('gpt-realtime-mini');
-  const [voice, setVoice] = useState<RealtimeVoice>(PERSONALITY_PRESETS[0]!.voice.model_voice);
-  const [vadEagerness, setVadEagerness] = useState<VADEagerness>('medium');
+const SOFIA_PERSONALITY = PERSONALITY_PRESETS.find((p) => p.id === 'language-tutor')!;
+const TUTORIAL_STORAGE_KEY = 'teacher_tutorial_completed';
+
+export function useTeacherController() {
+  const [model] = useState<RealtimeModel>('gpt-realtime-mini');
+  const [voice, setVoice] = useState<RealtimeVoice>(SOFIA_PERSONALITY.voice.model_voice as RealtimeVoice);
+  const [vadEagerness, setVadEagerness] = useState<VADEagerness>('low');
   const [transcript, setTranscript] = useState<TranscriptEntry[]>([]);
   const [totalCost, setTotalCost] = useState(0);
   const [totalTokens, setTotalTokens] = useState(0);
-  const [selectedPersonality, setSelectedPersonality] = useState<PersonalityConfig>(
-    PERSONALITY_PRESETS[0]!
-  );
   const [showSettings, setShowSettings] = useState(false);
-  const [showContextModal, setShowContextModal] = useState(false);
-  const [pendingContext, setPendingContext] = useState<string>('');
+  const [showTutorial, setShowTutorial] = useState(false);
+  const [pendingActivity, setPendingActivity] = useState<string | null>(null);
   const [resumingSession, setResumingSession] = useState<SessionRecord | null>(null);
 
-  // Auto-sync voice when personality changes
-  useEffect(() => {
-    setVoice(selectedPersonality.voice.model_voice);
-  }, [selectedPersonality]);
+  // Student profile state
+  const [studentLevel, setStudentLevel] = useState<string | null>(null);
+  const [studentStreak, setStudentStreak] = useState(0);
+  const [studentPoints, setStudentPoints] = useState(0);
+
+  const [exerciseActive, setExerciseActive] = useState(false);
 
   const location = useLocation();
   const sessionStartRef = useRef<string>(new Date().toISOString());
   const sessionIdRef = useRef<string>(crypto.randomUUID());
   const resumeHandledRef = useRef(false);
+  const prevExerciseActiveRef = useRef(false);
+
+  // Load student profile on mount
+  useEffect(() => {
+    void (async () => {
+      try {
+        const db = await getDB();
+        const profiles = await db.getAll('student_profile');
+        if (profiles.length > 0) {
+          const profile = profiles[0]!;
+          setStudentLevel(profile.level ?? null);
+        }
+        const gamData = await db.getAll('gamification');
+        if (gamData.length > 0) {
+          const gam = gamData[0]!;
+          setStudentPoints(gam.points ?? 0);
+          setStudentStreak(gam.streak ?? 0);
+        }
+      } catch {
+        // IndexedDB not available or empty
+      }
+    })();
+  }, []);
+
+  // Check if tutorial should be shown
+  useEffect(() => {
+    if (!localStorage.getItem(TUTORIAL_STORAGE_KEY)) {
+      setShowTutorial(true);
+    }
+  }, []);
+
+  const handleTutorialComplete = useCallback(() => {
+    localStorage.setItem(TUTORIAL_STORAGE_KEY, 'true');
+    setShowTutorial(false);
+  }, []);
 
   const handleTranscript = useCallback((text: string, role: 'user' | 'assistant') => {
     setTranscript((prev) => [...prev, { role, text, timestamp: new Date().toISOString() }]);
@@ -63,7 +100,6 @@ export function useConversationController() {
           setTotalCost((prev) => prev + cost);
           setTotalTokens((prev) => prev + done.response.usage!.total_tokens);
         }
-
         void actionHandlers.handleResponseDone(done);
       }
       // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -83,7 +119,7 @@ export function useConversationController() {
         type: 'semantic_vad',
         eagerness: vadEagerness,
         create_response: true,
-        interrupt_response: true,
+        interrupt_response: false,
       },
     },
     onEvent: handleEvent,
@@ -95,6 +131,50 @@ export function useConversationController() {
   const actionHandlers = useActionRegistry(appActions, session);
   const personality = usePersonality(session);
   const memory = useMemory();
+
+  // Detect exercise mode from transcript to adjust VAD
+  useEffect(() => {
+    const isExercise = detectExerciseActive(transcript);
+    setExerciseActive(isExercise);
+  }, [transcript]);
+
+  // Auto-adjust interrupt_response when exercise state changes
+  useEffect(() => {
+    if (prevExerciseActiveRef.current === exerciseActive) return;
+    prevExerciseActiveRef.current = exerciseActive;
+
+    if (session.status === 'idle' || session.status === 'disconnected') return;
+
+    session.sendEvent({
+      type: 'session.update',
+      session: {
+        turn_detection: {
+          type: 'semantic_vad',
+          eagerness: exerciseActive ? 'low' : vadEagerness,
+          create_response: true,
+          interrupt_response: !exerciseActive,
+        },
+      },
+    });
+  }, [exerciseActive, session, vadEagerness]);
+
+  // Update VAD mid-session when eagerness changes
+  useEffect(() => {
+    if (session.status === 'idle' || session.status === 'disconnected') return;
+
+    session.sendEvent({
+      type: 'session.update',
+      session: {
+        turn_detection: {
+          type: 'semantic_vad',
+          eagerness: exerciseActive ? 'low' : vadEagerness,
+          create_response: true,
+          interrupt_response: !exerciseActive,
+        },
+      },
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [vadEagerness]);
 
   const handleToggleMute = useCallback(() => {
     audioControls.toggleMute();
@@ -122,10 +202,11 @@ export function useConversationController() {
     }
   }, [audioControls, session, vadEagerness]);
 
+  // Apply personality and inject memories when connected
   useEffect(() => {
     if (session.status === 'connected') {
       sessionContext.setSendEvent(session.sendEvent);
-      personality.applyPersonality(selectedPersonality);
+      personality.applyPersonality(SOFIA_PERSONALITY);
       void memory.loadAndInjectMemories(session.sendEvent);
       actionHandlers.syncTools();
 
@@ -148,17 +229,29 @@ export function useConversationController() {
         }
       }
 
-      // Inject user context if provided
-      if (pendingContext) {
+      // Inject activity context if user selected one from welcome screen
+      if (pendingActivity) {
+        const activityPrompts: Record<string, string> = {
+          free: 'Let\'s have a free conversation to practice English.',
+          quiz: 'I want to start a vocabulary quiz.',
+          roleplay: 'Let\'s do a roleplay scenario.',
+          pronunciation: 'I want to practice pronunciation.',
+          dictation: 'Let\'s do a dictation exercise.',
+          flashcards: 'Let\'s review my flashcards.',
+          debate: 'Let\'s have a debate to practice argumentation.',
+        };
+
+        const prompt = activityPrompts[pendingActivity] ?? pendingActivity;
         session.sendEvent({
           type: 'conversation.item.create',
           item: {
             type: 'message',
             role: 'user',
-            content: [{ type: 'input_text', text: pendingContext }],
+            content: [{ type: 'input_text', text: prompt }],
           },
         });
-        setPendingContext('');
+        session.sendEvent({ type: 'response.create' });
+        setPendingActivity(null);
       }
 
       // If resuming a session, inject previous transcript as context
@@ -185,17 +278,14 @@ export function useConversationController() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session.status]);
 
-  const handleConnect = useCallback(async () => {
+  const handleConnect = useCallback(async (activity?: string) => {
     if (!apiKeyManager.hasKey()) {
       setShowSettings(true);
       return;
     }
-    setShowContextModal(true);
-  }, []);
-
-  const handleContextSubmit = useCallback(async (context: string) => {
-    setShowContextModal(false);
-    setPendingContext(context);
+    if (activity) {
+      setPendingActivity(activity);
+    }
     sessionStartRef.current = new Date().toISOString();
     sessionIdRef.current = crypto.randomUUID();
     sessionContext.setSessionId(sessionIdRef.current);
@@ -204,52 +294,6 @@ export function useConversationController() {
     setTotalTokens(0);
     await session.connect();
   }, [session]);
-
-  const handleContextClose = useCallback(() => {
-    setShowContextModal(false);
-  }, []);
-
-  const handleResumeSession = useCallback(async (sessionRecord: SessionRecord) => {
-    if (!apiKeyManager.hasKey()) {
-      setShowSettings(true);
-      return;
-    }
-
-    // Load the personality used in the original session
-    const allPersonalities = [
-      ...PERSONALITY_PRESETS,
-      ...JSON.parse(localStorage.getItem('personalities') ?? '[]') as PersonalityConfig[],
-    ];
-    const originalPersonality = allPersonalities.find((p) => p.id === sessionRecord.personalityId);
-    if (originalPersonality) {
-      setSelectedPersonality(originalPersonality);
-    }
-
-    // Set model from original session
-    setModel(sessionRecord.model as RealtimeModel);
-
-    // Load previous transcript into view
-    setTranscript([...sessionRecord.transcript]);
-    setResumingSession(sessionRecord);
-
-    sessionStartRef.current = new Date().toISOString();
-    sessionIdRef.current = crypto.randomUUID();
-    sessionContext.setSessionId(sessionIdRef.current);
-    setTotalCost(0);
-    setTotalTokens(0);
-    await session.connect();
-  }, [session]);
-
-  // Handle resume session from navigation state (from History page)
-  useEffect(() => {
-    const state = location.state as { resumeSession?: SessionRecord } | null;
-    if (state?.resumeSession && !resumeHandledRef.current) {
-      resumeHandledRef.current = true;
-      void handleResumeSession(state.resumeSession);
-      window.history.replaceState({}, '');
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [location.state]);
 
   const handleDisconnect = useCallback(async () => {
     session.disconnect();
@@ -266,13 +310,24 @@ export function useConversationController() {
         estimatedCostUsd: totalCost,
         transcript,
         actionsTriggered: actionHandlers.actionLog.map((a) => a.name),
-        personalityId: selectedPersonality.id,
+        personalityId: SOFIA_PERSONALITY.id,
         ...(pendingReport ? { tutorReport: pendingReport } : {}),
       };
 
       try {
         const db = await getDB();
         await db.put('sessions', record);
+
+        // Refresh student data after session
+        const profiles = await db.getAll('student_profile');
+        if (profiles.length > 0) {
+          setStudentLevel(profiles[0]!.level ?? null);
+        }
+        const gamData = await db.getAll('gamification');
+        if (gamData.length > 0) {
+          setStudentPoints(gamData[0]!.points ?? 0);
+          setStudentStreak(gamData[0]!.streak ?? 0);
+        }
       } catch (e) {
         console.error('Failed to save session:', e);
       }
@@ -282,16 +337,43 @@ export function useConversationController() {
     }
 
     sessionContext.clear();
-  }, [
-    session,
-    transcript,
-    model,
-    totalTokens,
-    totalCost,
-    actionHandlers.actionLog,
-    selectedPersonality.id,
-    memory,
-  ]);
+  }, [session, transcript, model, totalTokens, totalCost, actionHandlers.actionLog, memory]);
+
+  // Inject a user message into active session (for quick actions and challenge answers)
+  const injectUserMessage = useCallback((text: string) => {
+    if (session.status !== 'idle' && session.status !== 'disconnected') {
+      session.sendEvent({
+        type: 'conversation.item.create',
+        item: {
+          type: 'message',
+          role: 'user',
+          content: [{ type: 'input_text', text }],
+        },
+      });
+      session.sendEvent({ type: 'response.create' });
+      setTranscript((prev) => [...prev, { role: 'user', text, timestamp: new Date().toISOString() }]);
+    }
+  }, [session]);
+
+  // Handle resume session from navigation state (from History page)
+  useEffect(() => {
+    const state = location.state as { resumeSession?: SessionRecord } | null;
+    if (state?.resumeSession && !resumeHandledRef.current) {
+      resumeHandledRef.current = true;
+      setTranscript([...state.resumeSession.transcript]);
+      setResumingSession(state.resumeSession);
+      void (async () => {
+        sessionStartRef.current = new Date().toISOString();
+        sessionIdRef.current = crypto.randomUUID();
+        sessionContext.setSessionId(sessionIdRef.current);
+        setTotalCost(0);
+        setTotalTokens(0);
+        await session.connect();
+      })();
+      window.history.replaceState({}, '');
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.state]);
 
   const isActive =
     session.status !== 'idle' &&
@@ -299,8 +381,6 @@ export function useConversationController() {
     session.status !== 'error';
 
   return {
-    model,
-    setModel,
     voice,
     setVoice,
     vadEagerness,
@@ -308,20 +388,21 @@ export function useConversationController() {
     transcript,
     totalCost,
     totalTokens,
-    selectedPersonality,
-    setSelectedPersonality,
     showSettings,
     setShowSettings,
-    showContextModal,
+    showTutorial,
+    handleTutorialComplete,
     session,
     audioControls,
     actionHandlers,
     isActive,
     handleConnect,
-    handleContextSubmit,
-    handleContextClose,
     handleDisconnect,
     handleToggleMute,
-    handleResumeSession,
+    injectUserMessage,
+    studentLevel,
+    studentStreak,
+    studentPoints,
+    exerciseActive,
   };
 }

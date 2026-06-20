@@ -1,9 +1,8 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { I18nProvider } from '@/i18n';
-import { ConversationPage } from '@/components/pages/ConversationPage';
+import { TeacherPage } from '@/components/pages/TeacherPage';
 import { SettingsPage } from '@/components/pages/SettingsPage';
 import { HistoryPage } from '@/components/pages/HistoryPage';
-import { PersonalityEditorPage } from '@/components/pages/PersonalityEditorPage';
 import { FaqPage } from '@/components/pages/FaqPage';
 
 export function App() {
@@ -11,10 +10,9 @@ export function App() {
     <I18nProvider>
       <BrowserRouter>
         <Routes>
-          <Route path="/" element={<ConversationPage />} />
+          <Route path="/" element={<TeacherPage />} />
           <Route path="/settings" element={<SettingsPage />} />
           <Route path="/history" element={<HistoryPage />} />
-          <Route path="/personality/:id?" element={<PersonalityEditorPage />} />
           <Route path="/faq" element={<FaqPage />} />
         </Routes>
       </BrowserRouter>

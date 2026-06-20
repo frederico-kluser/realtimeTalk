@@ -57,6 +57,21 @@ export function useActionRegistry(
         logRef.current = [logEntry, ...logRef.current].slice(0, 50);
         setActionLog([...logRef.current]);
 
+        // Side-effect: inject immersion instructions into the session
+        if (call.name === 'toggle_immersion_mode') {
+          const immResult = result as { _immersionInstructions?: string };
+          if (immResult._immersionInstructions) {
+            session.sendEvent({
+              type: 'conversation.item.create',
+              item: {
+                type: 'message',
+                role: 'system',
+                content: [{ type: 'input_text', text: immResult._immersionInstructions }],
+              },
+            });
+          }
+        }
+
         if (type === 'background') continue;
 
         session.sendEvent({
